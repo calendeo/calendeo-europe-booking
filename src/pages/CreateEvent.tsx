@@ -1257,10 +1257,6 @@ const CreateEvent = () => {
         ];
 
 
-        const [newRule, setNewRule] = useState<Partial<DisqualificationRule>>({
-          operator: 'is',
-          question_type: 'phone'
-        });
 
         const addDisqualificationRule = () => {
           if (!newRule.question_id || !newRule.expected_value) return;
