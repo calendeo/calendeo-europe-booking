@@ -1779,7 +1779,7 @@ const CreateEvent = () => {
                   <h3 className="text-lg font-medium">Détails de l'automatisation</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="automation-name">Nom de l'automatisation *</Label>
                     <Input
@@ -1790,31 +1790,23 @@ const CreateEvent = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="automation-event">Événement associé</Label>
-                    <Select
-                      value={automationForm.event_id || ''}
-                      onValueChange={(value) => setAutomationForm(prev => ({ ...prev, event_id: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un événement" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableEvents.map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
+                    Cette automatisation sera associée à l'événement en cours de création.
                   </div>
                 </div>
 
                 {automationStep === 1 && (
                   <div className="flex justify-end">
                     <Button
-                      onClick={() => setAutomationStep(2)}
-                      disabled={!automationForm.name || !automationForm.event_id}
+                      onClick={() => {
+                        // Auto-associate with current event being created
+                        setAutomationForm(prev => ({ 
+                          ...prev, 
+                          event_id: eventDraft.name || 'current-event' 
+                        }));
+                        setAutomationStep(2);
+                      }}
+                      disabled={!automationForm.name}
                     >
                       Suivant →
                     </Button>
