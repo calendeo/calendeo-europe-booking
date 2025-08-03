@@ -424,54 +424,48 @@ export type Database = {
       }
       notifications: {
         Row: {
-          content: string
           created_at: string
           created_by: string
-          event_id: string | null
+          event_id: string
           id: string
-          recipient: Database["public"]["Enums"]["notification_recipient"]
-          timing: string | null
-          trigger: Database["public"]["Enums"]["notification_trigger"]
-          type: Database["public"]["Enums"]["notification_type"]
+          is_active: boolean
+          message: string
+          offset_type: string
+          offset_unit: string
+          offset_value: number
+          recipient_type: string
+          subject: string
+          updated_at: string
         }
         Insert: {
-          content: string
           created_at?: string
           created_by: string
-          event_id?: string | null
+          event_id: string
           id?: string
-          recipient: Database["public"]["Enums"]["notification_recipient"]
-          timing?: string | null
-          trigger: Database["public"]["Enums"]["notification_trigger"]
-          type: Database["public"]["Enums"]["notification_type"]
+          is_active?: boolean
+          message: string
+          offset_type: string
+          offset_unit: string
+          offset_value: number
+          recipient_type: string
+          subject: string
+          updated_at?: string
         }
         Update: {
-          content?: string
           created_at?: string
           created_by?: string
-          event_id?: string | null
+          event_id?: string
           id?: string
-          recipient?: Database["public"]["Enums"]["notification_recipient"]
-          timing?: string | null
-          trigger?: Database["public"]["Enums"]["notification_trigger"]
-          type?: Database["public"]["Enums"]["notification_type"]
+          is_active?: boolean
+          message?: string
+          offset_type?: string
+          offset_unit?: string
+          offset_value?: number
+          recipient_type?: string
+          subject?: string
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       team_members: {
         Row: {
