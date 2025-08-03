@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video, Clock } from 'lucide-react';
+import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video, Clock, Plus, Edit2, Trash2, GripVertical, FileText, AlignLeft, CheckSquare, Circle, ChevronDown, Link } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,18 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+
+interface GuestFormQuestion {
+  id: string;
+  type: 'short_text' | 'long_text' | 'checkbox' | 'radio' | 'dropdown' | 'url';
+  label: string;
+  required: boolean;
+  options?: string[];
+}
 
 interface EventDraft {
   name?: string;
@@ -42,6 +52,12 @@ interface EventDraft {
   reschedule_allowed_team?: boolean;
   language?: 'fr' | 'en';
   hide_cookie_banner?: boolean;
+  // Step 3 fields
+  guest_form?: {
+    include_last_name: boolean;
+    include_email: boolean;
+    custom_questions: GuestFormQuestion[];
+  };
 }
 
 interface Step {
@@ -62,6 +78,8 @@ const CreateEvent = () => {
     mode: 'private'
   });
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<GuestFormQuestion | null>(null);
 
   // Color palette for event colors
   const colorOptions = [
@@ -758,6 +776,434 @@ const CreateEvent = () => {
                 Enregistrer et continuer →
               </Button>
             </div>
+          </div>
+        );
+
+      case 3:
+        const isStep3Valid = true; // Always valid as form is optional
+        
+        // Initialize guest form if not exists
+        if (!eventDraft.guest_form) {
+          setEventDraft(prev => ({
+            ...prev,
+            guest_form: {
+              include_last_name: false,
+              include_email: false,
+              custom_questions: []
+            }
+          }));
+        }
+
+        const QuestionModal = () => {
+          const [questionData, setQuestionData] = useState<Partial<GuestFormQuestion>>(
+            editingQuestion || {
+              type: 'short_text',
+              label: '',
+              required: false,
+              options: []
+            }
+          );
+
+          const questionTypeIcons = {
+            short_text: FileText,
+            long_text: AlignLeft,
+            checkbox: CheckSquare,
+            radio: Circle,
+            dropdown: ChevronDown,
+            url: Link
+          };
+
+          const requiresOptions = (type: string) => 
+            ['checkbox', 'radio', 'dropdown'].includes(type);
+
+          const handleSaveQuestion = () => {
+            if (!questionData.label) return;
+
+            const newQuestion: GuestFormQuestion = {
+              id: editingQuestion?.id || `q_${Date.now()}`,
+              type: questionData.type!,
+              label: questionData.label,
+              required: questionData.required || false,
+              options: requiresOptions(questionData.type!) ? (questionData.options || []) : undefined
+            };
+
+            setEventDraft(prev => ({
+              ...prev,
+              guest_form: {
+                ...prev.guest_form!,
+                custom_questions: editingQuestion
+                  ? prev.guest_form!.custom_questions.map(q => q.id === editingQuestion.id ? newQuestion : q)
+                  : [...prev.guest_form!.custom_questions, newQuestion]
+              }
+            }));
+
+            setIsQuestionModalOpen(false);
+            setEditingQuestion(null);
+          };
+
+          return (
+            <Dialog open={isQuestionModalOpen} onOpenChange={setIsQuestionModalOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingQuestion ? 'Modifier la question' : 'Ajouter une nouvelle question'}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-6">
+                  {/* Question Type */}
+                  <div>
+                    <Label className="text-sm font-medium text-foreground mb-3 block">
+                      Type de question *
+                    </Label>
+                    <Select 
+                      value={questionData.type} 
+                      onValueChange={(value: GuestFormQuestion['type']) => 
+                        setQuestionData(prev => ({ ...prev, type: value, options: requiresOptions(value) ? ['Option 1'] : undefined }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="short_text">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Texte court
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="long_text">
+                          <div className="flex items-center gap-2">
+                            <AlignLeft className="h-4 w-4" />
+                            Texte long
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="checkbox">
+                          <div className="flex items-center gap-2">
+                            <CheckSquare className="h-4 w-4" />
+                            Cases à cocher
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="radio">
+                          <div className="flex items-center gap-2">
+                            <Circle className="h-4 w-4" />
+                            Boutons radio
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="dropdown">
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className="h-4 w-4" />
+                            Menu déroulant
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="url">
+                          <div className="flex items-center gap-2">
+                            <Link className="h-4 w-4" />
+                            URL
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Question Label */}
+                  <div>
+                    <Label htmlFor="question_label" className="text-sm font-medium text-foreground">
+                      Libellé de la question *
+                    </Label>
+                    <Input
+                      id="question_label"
+                      placeholder="Ex: Quel est votre secteur d'activité ?"
+                      value={questionData.label || ''}
+                      onChange={(e) => setQuestionData(prev => ({ ...prev, label: e.target.value }))}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  {/* Required Toggle */}
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-foreground">
+                      Question obligatoire
+                    </Label>
+                    <Switch
+                      checked={questionData.required || false}
+                      onCheckedChange={(checked) => setQuestionData(prev => ({ ...prev, required: checked }))}
+                    />
+                  </div>
+
+                  {/* Options for choice-based questions */}
+                  {requiresOptions(questionData.type!) && (
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-3 block">
+                        Options de réponse
+                      </Label>
+                      <div className="space-y-2">
+                        {(questionData.options || []).map((option, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Input
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...(questionData.options || [])];
+                                newOptions[index] = e.target.value;
+                                setQuestionData(prev => ({ ...prev, options: newOptions }));
+                              }}
+                              placeholder={`Option ${index + 1}`}
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                const newOptions = questionData.options?.filter((_, i) => i !== index) || [];
+                                setQuestionData(prev => ({ ...prev, options: newOptions }));
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const newOptions = [...(questionData.options || []), `Option ${(questionData.options?.length || 0) + 1}`];
+                            setQuestionData(prev => ({ ...prev, options: newOptions }));
+                          }}
+                          className="w-full"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ajouter une option
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Save Button */}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsQuestionModalOpen(false);
+                        setEditingQuestion(null);
+                      }}
+                    >
+                      Annuler
+                    </Button>
+                    <Button onClick={handleSaveQuestion} disabled={!questionData.label}>
+                      {editingQuestion ? 'Modifier' : 'Ajouter'} la question
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          );
+        };
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Formulaire des invités
+              </h2>
+              <p className="text-muted-foreground">
+                Configurez les informations que vous souhaitez collecter auprès de vos invités.
+              </p>
+            </div>
+            
+            <div className="bg-card rounded-xl p-6 border space-y-8">
+              {/* Primary Questions */}
+              <div>
+                <h3 className="text-lg font-medium text-foreground mb-4">
+                  Questions principales
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Ces champs apparaissent toujours sur le formulaire de réservation.
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Always required fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+                      <div>
+                        <div className="font-medium text-sm">Prénom</div>
+                        <div className="text-xs text-muted-foreground">Toujours requis</div>
+                      </div>
+                      <span className="text-xs text-primary font-medium">OBLIGATOIRE</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+                      <div>
+                        <div className="font-medium text-sm">Numéro de téléphone</div>
+                        <div className="text-xs text-muted-foreground">Recommandé obligatoire</div>
+                      </div>
+                      <span className="text-xs text-primary font-medium">OBLIGATOIRE</span>
+                    </div>
+                  </div>
+                  
+                  {/* Optional toggleable fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="font-medium text-sm">Nom de famille</div>
+                        <div className="text-xs text-muted-foreground">Optionnel</div>
+                      </div>
+                      <Switch
+                        checked={eventDraft.guest_form?.include_last_name || false}
+                        onCheckedChange={(checked) => 
+                          setEventDraft(prev => ({
+                            ...prev,
+                            guest_form: {
+                              ...prev.guest_form!,
+                              include_last_name: checked
+                            }
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="font-medium text-sm">Adresse email</div>
+                        <div className="text-xs text-muted-foreground">Optionnel</div>
+                      </div>
+                      <Switch
+                        checked={eventDraft.guest_form?.include_email || false}
+                        onCheckedChange={(checked) => 
+                          setEventDraft(prev => ({
+                            ...prev,
+                            guest_form: {
+                              ...prev.guest_form!,
+                              include_email: checked
+                            }
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Secondary Questions */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-foreground">
+                      Questions personnalisées
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Ajoutez des questions pour mieux qualifier vos invités.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setEditingQuestion(null);
+                      setIsQuestionModalOpen(true);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Ajouter une question
+                  </Button>
+                </div>
+
+                {/* Questions List */}
+                {eventDraft.guest_form?.custom_questions && eventDraft.guest_form.custom_questions.length > 0 ? (
+                  <div className="space-y-3">
+                    {eventDraft.guest_form.custom_questions.map((question) => {
+                      const IconComponent = {
+                        short_text: FileText,
+                        long_text: AlignLeft,
+                        checkbox: CheckSquare,
+                        radio: Circle,
+                        dropdown: ChevronDown,
+                        url: Link
+                      }[question.type];
+
+                      return (
+                        <div key={question.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <GripVertical className="h-4 w-4" />
+                              <IconComponent className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm">{question.label}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {question.type.replace('_', ' ')} 
+                                {question.required && (
+                                  <span className="ml-2 text-primary font-medium">(Obligatoire)</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setEditingQuestion(question);
+                                setIsQuestionModalOpen(true);
+                              }}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setEventDraft(prev => ({
+                                  ...prev,
+                                  guest_form: {
+                                    ...prev.guest_form!,
+                                    custom_questions: prev.guest_form!.custom_questions.filter(q => q.id !== question.id)
+                                  }
+                                }));
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <div className="mb-2">Aucune question personnalisée</div>
+                    <div className="text-sm">Cliquez sur "Ajouter une question" pour commencer</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep(2);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 2
+                  })));
+                }}
+                className="px-8"
+              >
+                ← Retour
+              </Button>
+              <Button 
+                onClick={() => {
+                  handleSaveStep(eventDraft);
+                  setCurrentStep(4);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 4,
+                    completed: s.id === 3 ? true : s.completed,
+                    locked: s.id === 4 ? false : s.locked
+                  })));
+                }}
+                className="px-8"
+              >
+                Enregistrer et continuer →
+              </Button>
+            </div>
+
+            <QuestionModal />
           </div>
         );
       
