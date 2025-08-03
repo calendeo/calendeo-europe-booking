@@ -1,15 +1,30 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EventDraft {
   name?: string;
+  color?: string;
+  mode?: 'private' | 'group' | 'round_robin';
+  host_ids?: string[];
+  guest_limit?: number;
+  show_remaining_spots?: boolean;
+  rotation_ids?: string[];
+  priorities?: { [userId: string]: number };
+  location?: 'zoom' | 'google_meet' | 'phone' | 'in_person';
+  address?: string;
+  description?: string;
+  slug?: string;
+  internal_note?: string;
   duration?: number;
   type?: string;
-  location?: string;
-  // Will be extended with more fields as we build each step
 }
 
 interface Step {
@@ -25,7 +40,45 @@ interface Step {
 const CreateEvent = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [eventDraft, setEventDraft] = useState<EventDraft>({});
+  const [eventDraft, setEventDraft] = useState<EventDraft>({
+    color: '#1a6be3',
+    mode: 'private'
+  });
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+
+  // Color palette for event colors
+  const colorOptions = [
+    '#1a6be3', '#57d084', '#f27c7c', '#ffa726', 
+    '#9c27b0', '#2196f3', '#4caf50', '#ff5722'
+  ];
+
+  // Generate slug from name
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
+
+  // Fetch available users on component mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('calendar_connected', true)
+        .eq('active', true);
+      setAvailableUsers(data || []);
+    };
+    fetchUsers();
+  }, []);
+
+  // Auto-generate slug when name changes
+  useEffect(() => {
+    if (eventDraft.name && (!eventDraft.slug || eventDraft.slug === generateSlug(eventDraft.name))) {
+      setEventDraft(prev => ({ ...prev, slug: generateSlug(eventDraft.name || '') }));
+    }
+  }, [eventDraft.name]);
 
   const [steps, setSteps] = useState<Step[]>([
     { id: 1, name: 'Détails', title: 'Informations de base', completed: false, active: true, locked: false },
@@ -66,6 +119,8 @@ const CreateEvent = () => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+        const isStep1Valid = eventDraft.name && eventDraft.host_ids && eventDraft.host_ids.length > 0;
+        
         return (
           <div className="space-y-6">
             <div>
@@ -77,82 +132,264 @@ const CreateEvent = () => {
               </p>
             </div>
             
-            <div className="bg-card rounded-xl p-6 border">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Nom de l'événement *
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Consultation découverte"
-                    value={eventDraft.name || ''}
-                    onChange={(e) => setEventDraft(prev => ({ ...prev, name: e.target.value }))}
+            <div className="bg-card rounded-xl p-6 border space-y-8">
+              {/* Event Name */}
+              <div>
+                <Label htmlFor="name" className="text-sm font-medium text-foreground">
+                  Nom de l'événement *
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Ex : Appel découverte, Entretien stratégique"
+                  value={eventDraft.name || ''}
+                  onChange={(e) => setEventDraft(prev => ({ ...prev, name: e.target.value }))}
+                  className="mt-2"
+                />
+              </div>
+
+              {/* Event Color */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Couleur de l'événement *
+                </Label>
+                <div className="flex gap-2 flex-wrap">
+                  {colorOptions.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setEventDraft(prev => ({ ...prev, color }))}
+                      className={cn(
+                        "w-8 h-8 rounded-full border-2 transition-all",
+                        eventDraft.color === color ? "border-foreground scale-110" : "border-border"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Event Mode */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Type d'événement *
+                </Label>
+                <RadioGroup 
+                  value={eventDraft.mode} 
+                  onValueChange={(value: 'private' | 'group' | 'round_robin') => 
+                    setEventDraft(prev => ({ ...prev, mode: value }))}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="private" id="private" />
+                    <Label htmlFor="private">Privé - 1 organisateur → 1 invité</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="group" id="group" />
+                    <Label htmlFor="group">Groupe - 1 organisateur → plusieurs invités</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="round_robin" id="round_robin" />
+                    <Label htmlFor="round_robin">Répartition - Organisateurs tournants (Round Robin)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Organizers */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Organisateurs *
+                </Label>
+                {availableUsers.length === 0 ? (
+                  <div className="p-4 bg-accent/50 rounded-lg border border-accent">
+                    <p className="text-sm text-muted-foreground">
+                      Pour continuer la création de votre événement, vous devez connecter un calendrier et enregistrer vos disponibilités.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {availableUsers.map((user) => (
+                      <div 
+                        key={user.id}
+                        className={cn(
+                          "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all",
+                          eventDraft.host_ids?.includes(user.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                        )}
+                        onClick={() => {
+                          const currentHosts = eventDraft.host_ids || [];
+                          const isSelected = currentHosts.includes(user.id);
+                          if (eventDraft.mode === 'private' || eventDraft.mode === 'group') {
+                            setEventDraft(prev => ({ ...prev, host_ids: isSelected ? [] : [user.id] }));
+                          } else {
+                            setEventDraft(prev => ({ 
+                              ...prev, 
+                              host_ids: isSelected 
+                                ? currentHosts.filter(id => id !== user.id)
+                                : [...currentHosts, user.id]
+                            }));
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Users className="h-4 w-4" />
+                          <span className="font-medium">{user.first_name} {user.last_name}</span>
+                          <span className="text-sm text-muted-foreground">({user.email})</span>
+                        </div>
+                        {eventDraft.host_ids?.includes(user.id) && (
+                          <Check className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Guest Limit for Group Mode */}
+              {eventDraft.mode === 'group' && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="guest_limit" className="text-sm font-medium text-foreground">
+                      Nombre maximum d'invités
+                    </Label>
+                    <Input
+                      id="guest_limit"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={eventDraft.guest_limit || ''}
+                      onChange={(e) => setEventDraft(prev => ({ ...prev, guest_limit: parseInt(e.target.value) || undefined }))}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="show_remaining"
+                      checked={eventDraft.show_remaining_spots || false}
+                      onChange={(e) => setEventDraft(prev => ({ ...prev, show_remaining_spots: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <Label htmlFor="show_remaining" className="text-sm">
+                      Afficher les places restantes sur la page de réservation
+                    </Label>
+                  </div>
+                </div>
+              )}
+
+              {/* Location */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Lieu de l'événement *
+                </Label>
+                <RadioGroup 
+                  value={eventDraft.location || 'zoom'} 
+                  onValueChange={(value: 'zoom' | 'google_meet' | 'phone' | 'in_person') => 
+                    setEventDraft(prev => ({ ...prev, location: value }))}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="zoom" id="zoom" />
+                    <Label htmlFor="zoom" className="flex items-center gap-2">
+                      <Video className="h-4 w-4" />
+                      Zoom
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="google_meet" id="google_meet" />
+                    <Label htmlFor="google_meet" className="flex items-center gap-2">
+                      <Video className="h-4 w-4" />
+                      Google Meet
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="phone" id="phone" />
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Téléphone
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="in_person" id="in_person" />
+                    <Label htmlFor="in_person" className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      En présentiel
+                    </Label>
+                  </div>
+                </RadioGroup>
+                
+                {eventDraft.location === 'in_person' && (
+                  <Input
+                    placeholder="Adresse complète"
+                    value={eventDraft.address || ''}
+                    onChange={(e) => setEventDraft(prev => ({ ...prev, address: e.target.value }))}
+                    className="mt-3"
+                  />
+                )}
+              </div>
+
+              {/* Public Description */}
+              <div>
+                <Label htmlFor="description" className="text-sm font-medium text-foreground">
+                  Description publique (facultatif)
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder="Indiquez des informations utiles à vos invités"
+                  value={eventDraft.description || ''}
+                  onChange={(e) => setEventDraft(prev => ({ ...prev, description: e.target.value }))}
+                  className="mt-2"
+                  rows={3}
+                />
+              </div>
+
+              {/* Custom Slug */}
+              <div>
+                <Label htmlFor="slug" className="text-sm font-medium text-foreground">
+                  Lien personnalisé *
+                </Label>
+                <div className="mt-2 flex items-center">
+                  <span className="text-sm text-muted-foreground">calendeo.com/</span>
+                  <Input
+                    id="slug"
+                    value={eventDraft.slug || ''}
+                    onChange={(e) => setEventDraft(prev => ({ ...prev, slug: e.target.value }))}
+                    className="ml-1 flex-1"
                   />
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Durée *
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      value={eventDraft.duration || 30}
-                      onChange={(e) => setEventDraft(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                    >
-                      <option value={15}>15 minutes</option>
-                      <option value={30}>30 minutes</option>
-                      <option value={45}>45 minutes</option>
-                      <option value={60}>1 heure</option>
-                      <option value={90}>1h30</option>
-                      <option value={120}>2 heures</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Type *
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      value={eventDraft.type || 'consultation'}
-                      onChange={(e) => setEventDraft(prev => ({ ...prev, type: e.target.value }))}
-                    >
-                      <option value="consultation">Consultation</option>
-                      <option value="meeting">Réunion</option>
-                      <option value="demo">Démonstration</option>
-                      <option value="interview">Entretien</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Lieu *
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      value={eventDraft.location || 'online'}
-                      onChange={(e) => setEventDraft(prev => ({ ...prev, location: e.target.value }))}
-                    >
-                      <option value="online">En ligne</option>
-                      <option value="phone">Téléphone</option>
-                      <option value="in_person">En personne</option>
-                    </select>
-                  </div>
-                </div>
               </div>
-              
-              <div className="flex justify-end pt-6">
-                <Button 
-                  onClick={() => handleSaveStep({ name: eventDraft.name, duration: eventDraft.duration, type: eventDraft.type, location: eventDraft.location })}
-                  disabled={!eventDraft.name}
-                  className="px-6"
-                >
-                  Continuer
-                </Button>
+
+              {/* Internal Note */}
+              <div>
+                <Label htmlFor="internal_note" className="text-sm font-medium text-foreground">
+                  Note interne (facultatif)
+                </Label>
+                <Textarea
+                  id="internal_note"
+                  placeholder="Notes privées non visibles par les invités"
+                  value={eventDraft.internal_note || ''}
+                  onChange={(e) => setEventDraft(prev => ({ ...prev, internal_note: e.target.value }))}
+                  className="mt-2"
+                  rows={2}
+                />
               </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <Button 
+                onClick={() => {
+                  if (isStep1Valid) {
+                    handleSaveStep(eventDraft);
+                    setCurrentStep(2);
+                    setSteps(prev => prev.map(s => ({
+                      ...s,
+                      active: s.id === 2,
+                      completed: s.id === 1 ? true : s.completed,
+                      locked: s.id === 2 ? false : s.locked
+                    })));
+                  }
+                }}
+                disabled={!isStep1Valid}
+                className="px-8"
+              >
+                Enregistrer et continuer
+              </Button>
             </div>
           </div>
         );
