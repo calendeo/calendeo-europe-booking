@@ -21,6 +21,14 @@ interface GuestFormQuestion {
   options?: string[];
 }
 
+interface DisqualificationRule {
+  id: string;
+  question_id?: string;
+  question_type: 'radio' | 'checkbox' | 'phone';
+  operator: 'is' | 'is_not';
+  expected_value: string;
+}
+
 interface EventDraft {
   name?: string;
   color?: string;
@@ -58,6 +66,15 @@ interface EventDraft {
     include_email: boolean;
     custom_questions: GuestFormQuestion[];
   };
+  // Step 4 fields
+  disqualifications?: {
+    rules: DisqualificationRule[];
+    logic_type: 'AND' | 'OR';
+    message: string;
+    redirect_enabled: boolean;
+    redirect_url?: string;
+    redirect_with_params: boolean;
+  };
 }
 
 interface Step {
@@ -75,7 +92,19 @@ const CreateEvent = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [eventDraft, setEventDraft] = useState<EventDraft>({
     color: '#1a6be3',
-    mode: 'private'
+    mode: 'private',
+    guest_form: {
+      include_last_name: false,
+      include_email: false,
+      custom_questions: []
+    },
+    disqualifications: {
+      rules: [],
+      logic_type: 'OR',
+      message: 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
+      redirect_enabled: false,
+      redirect_with_params: false
+    }
   });
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
@@ -119,7 +148,7 @@ const CreateEvent = () => {
     { id: 1, name: 'Détails', title: 'Informations de base', completed: false, active: true, locked: false },
     { id: 2, name: 'Horaires', title: 'Disponibilités', completed: false, active: false, locked: true },
     { id: 3, name: 'Formulaire', title: 'Questions pour les invités', completed: false, active: false, locked: true },
-    { id: 4, name: 'Disqualifications', title: 'Règles de qualification', completed: false, active: false, locked: true, comingSoon: true },
+    { id: 4, name: 'Disqualifications', title: 'Règles de qualification', completed: false, active: false, locked: true },
     { id: 5, name: 'Automatisations', title: 'Actions automatiques', completed: false, active: false, locked: true, comingSoon: true },
     { id: 6, name: 'Notifications', title: 'Emails et rappels', completed: false, active: false, locked: true },
     { id: 7, name: 'Confirmation', title: 'Révision et publication', completed: false, active: false, locked: true },
@@ -1204,6 +1233,414 @@ const CreateEvent = () => {
             </div>
 
             <QuestionModal />
+          </div>
+        );
+
+      case 4:
+        // Check if we have eligible fields for disqualification
+        const hasPhoneField = true; // Phone is always included
+        const hasChoiceQuestions = eventDraft.guest_form?.custom_questions?.some(q => 
+          q.type === 'radio' || q.type === 'checkbox' || q.type === 'dropdown'
+        ) || false;
+        const hasEligibleFields = hasPhoneField || hasChoiceQuestions;
+
+        // Get all eligible questions for disqualification rules
+        const eligibleQuestions = [
+          ...(hasPhoneField ? [{ id: 'phone', label: 'Numéro de téléphone', type: 'phone' as const }] : []),
+          ...(eventDraft.guest_form?.custom_questions?.filter(q => 
+            q.type === 'radio' || q.type === 'checkbox' || q.type === 'dropdown'
+          ) || [])
+        ];
+
+        const [newRule, setNewRule] = useState<Partial<DisqualificationRule>>({
+          operator: 'is',
+          question_type: 'phone'
+        });
+
+        const addDisqualificationRule = () => {
+          if (!newRule.question_id || !newRule.expected_value) return;
+
+          const rule: DisqualificationRule = {
+            id: crypto.randomUUID(),
+            question_id: newRule.question_id,
+            question_type: newRule.question_type!,
+            operator: newRule.operator!,
+            expected_value: newRule.expected_value
+          };
+
+          setEventDraft(prev => ({
+            ...prev,
+            disqualifications: {
+              ...prev.disqualifications!,
+              rules: [...prev.disqualifications!.rules, rule]
+            }
+          }));
+
+          setNewRule({ operator: 'is', question_type: 'phone' });
+        };
+
+        const removeRule = (ruleId: string) => {
+          setEventDraft(prev => ({
+            ...prev,
+            disqualifications: {
+              ...prev.disqualifications!,
+              rules: prev.disqualifications!.rules.filter(r => r.id !== ruleId)
+            }
+          }));
+        };
+
+        const isStep4Valid = eventDraft.disqualifications?.rules.length! > 0;
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Disqualification automatique
+              </h2>
+              <p className="text-muted-foreground">
+                Définissez des règles pour exclure automatiquement certaines personnes avant qu'elles n'accèdent à votre page de réservation.
+              </p>
+            </div>
+
+            {!hasEligibleFields ? (
+              // No eligible fields warning
+              <div className="bg-card rounded-xl p-8 border text-center space-y-4">
+                <div className="text-lg font-medium text-foreground">
+                  Aucun champ éligible pour la disqualification
+                </div>
+                <p className="text-muted-foreground">
+                  La disqualification nécessite au moins une question à choix ou un numéro de téléphone. 
+                  Modifiez vos questions pour activer cette fonctionnalité.
+                </p>
+                <Button 
+                  onClick={() => {
+                    setCurrentStep(3);
+                    setSteps(prev => prev.map(s => ({
+                      ...s,
+                      active: s.id === 3
+                    })));
+                  }}
+                >
+                  Modifier les questions
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-card rounded-xl p-6 border space-y-8">
+                {/* Disqualification Rules */}
+                <div>
+                  <h3 className="text-lg font-medium text-foreground mb-4">
+                    Règles de disqualification
+                  </h3>
+                  
+                  {/* Add Rule Section */}
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          Question concernée
+                        </Label>
+                        <Select
+                          value={newRule.question_id}
+                          onValueChange={(value) => {
+                            const question = eligibleQuestions.find(q => q.id === value);
+                            setNewRule(prev => ({
+                              ...prev,
+                              question_id: value,
+                              question_type: question?.type === 'phone' ? 'phone' : 
+                                           question?.type === 'radio' ? 'radio' :
+                                           question?.type === 'checkbox' ? 'checkbox' : 'radio'
+                            }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une question" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {eligibleQuestions.map((question) => (
+                              <SelectItem key={question.id} value={question.id}>
+                                {question.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          Condition
+                        </Label>
+                        <Select
+                          value={newRule.operator}
+                          onValueChange={(value: 'is' | 'is_not') => setNewRule(prev => ({ ...prev, operator: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="is">EST</SelectItem>
+                            <SelectItem value="is_not">N'EST PAS</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          Valeur attendue
+                        </Label>
+                        {newRule.question_type === 'phone' ? (
+                          <Select
+                            value={newRule.expected_value}
+                            onValueChange={(value) => setNewRule(prev => ({ ...prev, expected_value: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Code pays" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="+33">+33 (France)</SelectItem>
+                              <SelectItem value="+1">+1 (USA/Canada)</SelectItem>
+                              <SelectItem value="+44">+44 (UK)</SelectItem>
+                              <SelectItem value="+49">+49 (Allemagne)</SelectItem>
+                              <SelectItem value="+39">+39 (Italie)</SelectItem>
+                              <SelectItem value="+34">+34 (Espagne)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Select
+                            value={newRule.expected_value}
+                            onValueChange={(value) => setNewRule(prev => ({ ...prev, expected_value: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner une réponse" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(() => {
+                                const question = eligibleQuestions.find(q => q.id === newRule.question_id);
+                                if (question && 'options' in question && question.options) {
+                                  return question.options.map((option) => (
+                                    <SelectItem key={option} value={option}>
+                                      {option}
+                                    </SelectItem>
+                                  ));
+                                }
+                                return [];
+                              })()}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      onClick={addDisqualificationRule}
+                      disabled={!newRule.question_id || !newRule.expected_value}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ajouter cette règle
+                    </Button>
+                  </div>
+
+                  {/* Existing Rules */}
+                  {eventDraft.disqualifications?.rules && eventDraft.disqualifications.rules.length > 0 && (
+                    <div className="space-y-4 mt-6">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-foreground">Règles actives</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Logique:</span>
+                          <Switch
+                            checked={eventDraft.disqualifications.logic_type === 'AND'}
+                            onCheckedChange={(checked) =>
+                              setEventDraft(prev => ({
+                                ...prev,
+                                disqualifications: {
+                                  ...prev.disqualifications!,
+                                  logic_type: checked ? 'AND' : 'OR'
+                                }
+                              }))
+                            }
+                          />
+                          <span className="text-sm font-medium">
+                            {eventDraft.disqualifications.logic_type}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {eventDraft.disqualifications.rules.map((rule) => {
+                        const question = eligibleQuestions.find(q => q.id === rule.question_id);
+                        return (
+                          <div key={rule.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="text-sm">
+                              <span className="font-medium">{question?.label}</span>
+                              <span className="mx-2 text-muted-foreground">
+                                {rule.operator === 'is' ? 'EST' : "N'EST PAS"}
+                              </span>
+                              <span className="font-medium">{rule.expected_value}</span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => removeRule(rule.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Preview */}
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <div className="text-sm text-muted-foreground">
+                          <strong>Aperçu:</strong> Si {eventDraft.disqualifications.rules.map((rule, index) => {
+                            const question = eligibleQuestions.find(q => q.id === rule.question_id);
+                            return (
+                              <span key={rule.id}>
+                                {index > 0 && ` ${eventDraft.disqualifications!.logic_type} `}
+                                la réponse à "{question?.label}" {rule.operator === 'is' ? 'EST' : "N'EST PAS"} {rule.expected_value}
+                              </span>
+                            );
+                          })}, alors l'invité sera disqualifié.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Disqualification Message */}
+                <div>
+                  <h3 className="text-lg font-medium text-foreground mb-4">
+                    Message affiché à l'invité
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Ce message s'affichera lorsqu'un invité est disqualifié
+                  </p>
+                  <Textarea
+                    value={eventDraft.disqualifications?.message || ''}
+                    onChange={(e) => 
+                      setEventDraft(prev => ({
+                        ...prev,
+                        disqualifications: {
+                          ...prev.disqualifications!,
+                          message: e.target.value
+                        }
+                      }))
+                    }
+                    placeholder="Désolé, vous ne pouvez pas réserver cet évènement pour le moment."
+                    maxLength={250}
+                    className="resize-none"
+                    rows={3}
+                  />
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {eventDraft.disqualifications?.message?.length || 0}/250 caractères
+                  </div>
+                </div>
+
+                {/* Redirect Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-medium text-foreground">
+                        Redirection (optionnelle)
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Rediriger l'utilisateur vers une page externe après disqualification
+                      </p>
+                    </div>
+                    <Switch
+                      checked={eventDraft.disqualifications?.redirect_enabled || false}
+                      onCheckedChange={(checked) =>
+                        setEventDraft(prev => ({
+                          ...prev,
+                          disqualifications: {
+                            ...prev.disqualifications!,
+                            redirect_enabled: checked
+                          }
+                        }))
+                      }
+                    />
+                  </div>
+                  
+                  {eventDraft.disqualifications?.redirect_enabled && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="redirect_url" className="text-sm font-medium text-foreground">
+                          URL de redirection
+                        </Label>
+                        <Input
+                          id="redirect_url"
+                          type="url"
+                          placeholder="https://example.com/alternative"
+                          value={eventDraft.disqualifications?.redirect_url || ''}
+                          onChange={(e) =>
+                            setEventDraft(prev => ({
+                              ...prev,
+                              disqualifications: {
+                                ...prev.disqualifications!,
+                                redirect_url: e.target.value
+                              }
+                            }))
+                          }
+                          className="mt-2"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="redirect_with_params"
+                          checked={eventDraft.disqualifications?.redirect_with_params || false}
+                          onCheckedChange={(checked) =>
+                            setEventDraft(prev => ({
+                              ...prev,
+                              disqualifications: {
+                                ...prev.disqualifications!,
+                                redirect_with_params: checked as boolean
+                              }
+                            }))
+                          }
+                        />
+                        <Label htmlFor="redirect_with_params" className="text-sm">
+                          Transmettre les données de l'événement dans l'URL
+                        </Label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep(3);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 3
+                  })));
+                }}
+                className="px-8"
+              >
+                ← Retour
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (hasEligibleFields && isStep4Valid) {
+                    handleSaveStep(eventDraft);
+                    setCurrentStep(5);
+                    setSteps(prev => prev.map(s => ({
+                      ...s,
+                      active: s.id === 5,
+                      completed: s.id === 4 ? true : s.completed,
+                      locked: s.id === 5 ? false : s.locked
+                    })));
+                  }
+                }}
+                disabled={!hasEligibleFields || !isStep4Valid}
+                className="px-8"
+              >
+                Enregistrer et continuer →
+              </Button>
+            </div>
           </div>
         );
       

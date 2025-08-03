@@ -150,6 +150,48 @@ export type Database = {
           },
         ]
       }
+      disqualifications: {
+        Row: {
+          created_at: string
+          created_by: string
+          disqualification_message: string
+          event_id: string
+          expected_value: string
+          id: string
+          logic_type: string
+          operator: string
+          question_id: string | null
+          redirect_url: string | null
+          redirect_with_params: boolean
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          disqualification_message?: string
+          event_id: string
+          expected_value: string
+          id?: string
+          logic_type?: string
+          operator: string
+          question_id?: string | null
+          redirect_url?: string | null
+          redirect_with_params?: boolean
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          disqualification_message?: string
+          event_id?: string
+          expected_value?: string
+          id?: string
+          logic_type?: string
+          operator?: string
+          question_id?: string | null
+          redirect_url?: string | null
+          redirect_with_params?: boolean
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           calendar_link: string | null
