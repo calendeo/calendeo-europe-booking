@@ -47,6 +47,19 @@ interface Automation {
   created_by?: string;
 }
 
+interface Notification {
+  id?: string;
+  event_id: string;
+  recipient_type: 'guest' | 'host' | 'manager' | 'admin';
+  offset_type: 'before' | 'after';
+  offset_value: number;
+  offset_unit: 'minutes' | 'hours' | 'days';
+  subject: string;
+  message: string;
+  is_active: boolean;
+  created_by?: string;
+}
+
 interface EventDraft {
   name?: string;
   color?: string;
@@ -143,6 +156,19 @@ const CreateEvent = () => {
     action_payload: {}
   });
   const [automationStep, setAutomationStep] = useState(1); // 1: Details, 2: Trigger, 3: Action
+
+  // Notification states
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [notificationForm, setNotificationForm] = useState<Partial<Notification>>({
+    recipient_type: 'guest',
+    offset_type: 'before',
+    offset_value: 15,
+    offset_unit: 'minutes',
+    is_active: true,
+    subject: '',
+    message: ''
+  });
 
   // Color palette for event colors
   const colorOptions = [
@@ -2094,6 +2120,288 @@ const CreateEvent = () => {
                     active: s.id === 6,
                     completed: s.id === 5 ? true : s.completed,
                     locked: s.id === 6 ? false : s.locked
+                  })));
+                }}
+                className="px-8"
+              >
+                Enregistrer et continuer →
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 6:
+        const saveNotification = async () => {
+          if (!notificationForm.recipient_type || !notificationForm.subject || !notificationForm.message) {
+            return;
+          }
+
+          const newNotification: Notification = {
+            id: `temp-${Date.now()}`,
+            event_id: eventDraft.name || 'current-event',
+            recipient_type: notificationForm.recipient_type as 'guest' | 'host' | 'manager' | 'admin',
+            offset_type: notificationForm.offset_type || 'before',
+            offset_value: notificationForm.offset_value || 15,
+            offset_unit: notificationForm.offset_unit || 'minutes',
+            subject: notificationForm.subject || '',
+            message: notificationForm.message || '',
+            is_active: notificationForm.is_active ?? true
+          };
+
+          try {
+            // TODO: Save to Supabase notifications table
+            console.log('Saving notification:', newNotification);
+            
+            setNotifications(prev => [...prev, newNotification]);
+            setIsNotificationModalOpen(false);
+            setNotificationForm({
+              recipient_type: 'guest',
+              offset_type: 'before',
+              offset_value: 15,
+              offset_unit: 'minutes',
+              is_active: true,
+              subject: '',
+              message: ''
+            });
+          } catch (error) {
+            console.error('Error saving notification:', error);
+          }
+        };
+
+        const deleteNotification = (id: string) => {
+          setNotifications(prev => prev.filter(n => n.id !== id));
+        };
+
+        const toggleNotification = (id: string) => {
+          setNotifications(prev => prev.map(n => 
+            n.id === id ? { ...n, is_active: !n.is_active } : n
+          ));
+        };
+
+        const getRecipientLabel = (type: string) => {
+          const labels = {
+            guest: 'Invité',
+            host: 'Organisateur',
+            manager: 'Manager',
+            admin: 'Administrateur'
+          };
+          return labels[type as keyof typeof labels] || type;
+        };
+
+        const getTimingText = (notification: Notification) => {
+          const unit = notification.offset_unit === 'minutes' ? 'min' : 
+                      notification.offset_unit === 'hours' ? 'h' : 'j';
+          return `${notification.offset_value}${unit} ${notification.offset_type === 'before' ? 'avant' : 'après'} l'événement`;
+        };
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Notifications et rappels
+              </h2>
+              <p className="text-muted-foreground">
+                Configurez les emails de rappel pour votre événement.
+              </p>
+            </div>
+
+            <div className="bg-card rounded-xl p-6 border space-y-6">
+              {/* Existing notifications list */}
+              {notifications.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Rappels configurés</h3>
+                  <div className="space-y-2">
+                    {notifications.map((notification) => (
+                      <div key={notification.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="text-xl">📤</div>
+                          <div>
+                            <div className="font-medium">
+                              {getRecipientLabel(notification.recipient_type)} • {getTimingText(notification)} • {notification.is_active ? 'Activé' : 'Désactivé'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {notification.subject}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={notification.is_active}
+                            onCheckedChange={() => toggleNotification(notification.id!)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteNotification(notification.id!)}
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add notification button */}
+              <Dialog open={isNotificationModalOpen} onOpenChange={setIsNotificationModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ajouter un rappel
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Ajouter un rappel</DialogTitle>
+                  </DialogHeader>
+                  
+                  <div className="space-y-6">
+                    {/* Section 1: Destinataire */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Envoyer ce rappel à</Label>
+                      <Select
+                        value={notificationForm.recipient_type}
+                        onValueChange={(value) => setNotificationForm(prev => ({ ...prev, recipient_type: value as any }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="guest">Invité</SelectItem>
+                          <SelectItem value="host">Organisateur (setter/closer)</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="admin">Administrateur</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Section 2: Déclencheur */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Quand envoyer ce rappel ?</Label>
+                      
+                      <div className="space-y-3">
+                        <RadioGroup
+                          value={notificationForm.offset_type}
+                          onValueChange={(value) => setNotificationForm(prev => ({ ...prev, offset_type: value as 'before' | 'after' }))}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="before" id="before" />
+                            <Label htmlFor="before">Avant l'événement</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="after" id="after" />
+                            <Label htmlFor="after">Après l'événement</Label>
+                          </div>
+                        </RadioGroup>
+
+                        <div className="flex gap-3">
+                          <div className="flex-1">
+                            <Label className="text-sm">Valeur</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={notificationForm.offset_value || ''}
+                              onChange={(e) => setNotificationForm(prev => ({ ...prev, offset_value: parseInt(e.target.value) || 15 }))}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label className="text-sm">Unité</Label>
+                            <Select
+                              value={notificationForm.offset_unit}
+                              onValueChange={(value) => setNotificationForm(prev => ({ ...prev, offset_unit: value as any }))}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="minutes">Minutes</SelectItem>
+                                <SelectItem value="hours">Heures</SelectItem>
+                                <SelectItem value="days">Jours</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg">
+                          Ce rappel sera envoyé {notificationForm.offset_value} {notificationForm.offset_unit} {notificationForm.offset_type === 'before' ? 'avant' : 'après'} l'événement.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Sujet */}
+                    <div className="space-y-2">
+                      <Label htmlFor="notification-subject">Sujet de l'email</Label>
+                      <Input
+                        id="notification-subject"
+                        placeholder="Ex: Rappel de votre rendez-vous demain"
+                        value={notificationForm.subject || ''}
+                        onChange={(e) => setNotificationForm(prev => ({ ...prev, subject: e.target.value }))}
+                      />
+                    </div>
+
+                    {/* Section 4: Message */}
+                    <div className="space-y-2">
+                      <Label htmlFor="notification-message">Message</Label>
+                      <Textarea
+                        id="notification-message"
+                        placeholder="Bonjour {{nom}}, votre rendez-vous {{event_name}} aura lieu {{date}} à {{heure}}..."
+                        value={notificationForm.message || ''}
+                        onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
+                        rows={4}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {`Vous pouvez insérer des variables dynamiques dans le message : {{nom}}, {{email}}, {{date}}, {{heure}}, {{lieu}}, {{event_name}}`}
+                      </p>
+                    </div>
+
+                    {/* Section 5: Statut */}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="notification-active"
+                        checked={notificationForm.is_active}
+                        onCheckedChange={(checked) => setNotificationForm(prev => ({ ...prev, is_active: !!checked }))}
+                      />
+                      <Label htmlFor="notification-active">Rappel activé par défaut</Label>
+                    </div>
+
+                    {/* Action button */}
+                    <Button
+                      onClick={saveNotification}
+                      disabled={!notificationForm.subject || !notificationForm.message}
+                      className="w-full"
+                    >
+                      Ajouter ce rappel
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-between pt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep(5);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 5
+                  })));
+                }}
+                className="px-8"
+              >
+                ← Retour
+              </Button>
+              <Button
+                onClick={() => {
+                  handleSaveStep({});
+                  setCurrentStep(7);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 7
                   })));
                 }}
                 className="px-8"
