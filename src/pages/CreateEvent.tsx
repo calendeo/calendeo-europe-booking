@@ -106,6 +106,18 @@ interface EventDraft {
     redirect_url?: string;
     redirect_with_params: boolean;
   };
+  // Step 7 fields
+  confirmation_settings?: {
+    confirmation_message: string;
+    cta_enabled: boolean;
+    cta_label: string;
+    cta_url: string;
+    theme_color: string;
+    logo_url?: string;
+    auto_redirect_enabled: boolean;
+    auto_redirect_url?: string;
+    auto_redirect_delay: number;
+  };
 }
 
 interface Step {
@@ -135,6 +147,15 @@ const CreateEvent = () => {
       message: 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
       redirect_enabled: false,
       redirect_with_params: false
+    },
+    confirmation_settings: {
+      confirmation_message: 'Merci {{prenom}}, votre rendez-vous est confirmé.',
+      cta_enabled: false,
+      cta_label: '',
+      cta_url: '',
+      theme_color: '#1a6be3',
+      auto_redirect_enabled: false,
+      auto_redirect_delay: 5
     }
   });
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
@@ -2404,6 +2425,303 @@ const CreateEvent = () => {
                     active: s.id === 7
                   })));
                 }}
+                className="px-8"
+              >
+                Enregistrer et continuer →
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 7:
+        const settings = eventDraft.confirmation_settings || {
+          confirmation_message: 'Merci {{prenom}}, votre rendez-vous est confirmé.',
+          cta_enabled: false,
+          cta_label: '',
+          cta_url: '',
+          theme_color: '#1a6be3',
+          auto_redirect_enabled: false,
+          auto_redirect_delay: 5
+        };
+
+        const isStep7Valid = settings.confirmation_message && 
+          (!settings.cta_enabled || (settings.cta_label && settings.cta_url)) &&
+          (!settings.auto_redirect_enabled || settings.auto_redirect_url);
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Page de confirmation
+              </h2>
+              <p className="text-muted-foreground">
+                Personnalisez l'expérience de confirmation après la réservation.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left column - Preview */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground">Aperçu</h3>
+                <div className="bg-card rounded-xl border p-6 space-y-6" style={{ backgroundColor: `${settings.theme_color}0a` }}>
+                  {/* Logo preview */}
+                  {settings.logo_url && (
+                    <div className="flex justify-center">
+                      <img src={settings.logo_url} alt="Logo" className="h-12 object-contain" />
+                    </div>
+                  )}
+                  
+                  {/* Message preview */}
+                  <div className="text-center space-y-4">
+                    <div className="text-lg font-medium" style={{ color: settings.theme_color }}>
+                      {settings.confirmation_message
+                        .replace('{{prenom}}', 'Sophie')
+                        .replace('{{event_name}}', eventDraft.name || 'Votre événement')
+                        .replace('{{date}}', '15 mars 2024')
+                        .replace('{{heure}}', '14:30')
+                        .replace('{{lieu}}', eventDraft.location === 'zoom' ? 'Zoom' : 'Google Meet')}
+                    </div>
+                    
+                    {/* CTA Button preview */}
+                    {settings.cta_enabled && settings.cta_label && (
+                      <Button 
+                        style={{ backgroundColor: settings.theme_color }}
+                        className="text-white"
+                      >
+                        {settings.cta_label}
+                      </Button>
+                    )}
+                    
+                    {/* Auto redirect preview */}
+                    {settings.auto_redirect_enabled && settings.auto_redirect_url && (
+                      <div className="text-sm text-muted-foreground">
+                        Redirection automatique dans {settings.auto_redirect_delay} secondes...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right column - Configuration */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-foreground">Configuration</h3>
+                
+                <div className="bg-card rounded-xl border p-6 space-y-6">
+                  {/* Message de confirmation */}
+                  <div>
+                    <Label className="text-sm font-medium text-foreground mb-2 block">
+                      Message de confirmation *
+                    </Label>
+                    <Textarea
+                      placeholder="Merci {{prenom}}, votre rendez-vous est confirmé."
+                      value={settings.confirmation_message}
+                      onChange={(e) => setEventDraft(prev => ({
+                        ...prev,
+                        confirmation_settings: {
+                          ...settings,
+                          confirmation_message: e.target.value
+                        }
+                      }))}
+                      className="min-h-[80px]"
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Variables disponibles : {'{prenom}'}, {'{event_name}'}, {'{date}'}, {'{heure}'}, {'{lieu}'}
+                    </div>
+                  </div>
+
+                  {/* Bouton d'action */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={settings.cta_enabled}
+                        onCheckedChange={(checked) => setEventDraft(prev => ({
+                          ...prev,
+                          confirmation_settings: {
+                            ...settings,
+                            cta_enabled: checked
+                          }
+                        }))}
+                      />
+                      <Label className="text-sm font-medium text-foreground">
+                        Bouton d'action
+                      </Label>
+                    </div>
+                    
+                    {settings.cta_enabled && (
+                      <div className="space-y-3 pl-6">
+                        <div>
+                          <Label className="text-sm font-medium text-foreground">
+                            Label du bouton
+                          </Label>
+                          <Input
+                            placeholder="Accéder à mon espace client"
+                            value={settings.cta_label}
+                            onChange={(e) => setEventDraft(prev => ({
+                              ...prev,
+                              confirmation_settings: {
+                                ...settings,
+                                cta_label: e.target.value
+                              }
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-foreground">
+                            URL de destination
+                          </Label>
+                          <Input
+                            placeholder="https://client.monsite.com"
+                            value={settings.cta_url}
+                            onChange={(e) => setEventDraft(prev => ({
+                              ...prev,
+                              confirmation_settings: {
+                                ...settings,
+                                cta_url: e.target.value
+                              }
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Personnalisation visuelle */}
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium text-foreground">
+                      Personnalisation visuelle
+                    </Label>
+                    
+                    <div>
+                      <Label className="text-sm text-muted-foreground">
+                        Couleur principale
+                      </Label>
+                      <div className="flex gap-2 mt-2">
+                        {colorOptions.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => setEventDraft(prev => ({
+                              ...prev,
+                              confirmation_settings: {
+                                ...settings,
+                                theme_color: color
+                              }
+                            }))}
+                            className={cn(
+                              "w-8 h-8 rounded-full border-2 transition-all",
+                              settings.theme_color === color ? "border-foreground scale-110" : "border-border"
+                            )}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm text-muted-foreground">
+                        Logo (optionnel)
+                      </Label>
+                      <Input
+                        placeholder="https://cdn.monsite.com/logo.png"
+                        value={settings.logo_url || ''}
+                        onChange={(e) => setEventDraft(prev => ({
+                          ...prev,
+                          confirmation_settings: {
+                            ...settings,
+                            logo_url: e.target.value
+                          }
+                        }))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Redirection automatique */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={settings.auto_redirect_enabled}
+                        onCheckedChange={(checked) => setEventDraft(prev => ({
+                          ...prev,
+                          confirmation_settings: {
+                            ...settings,
+                            auto_redirect_enabled: checked
+                          }
+                        }))}
+                      />
+                      <Label className="text-sm font-medium text-foreground">
+                        Redirection automatique
+                      </Label>
+                    </div>
+                    
+                    {settings.auto_redirect_enabled && (
+                      <div className="space-y-3 pl-6">
+                        <div>
+                          <Label className="text-sm font-medium text-foreground">
+                            URL de redirection
+                          </Label>
+                          <Input
+                            placeholder="https://monsite.com/merci"
+                            value={settings.auto_redirect_url || ''}
+                            onChange={(e) => setEventDraft(prev => ({
+                              ...prev,
+                              confirmation_settings: {
+                                ...settings,
+                                auto_redirect_url: e.target.value
+                              }
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-foreground">
+                            Délai (secondes)
+                          </Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="60"
+                            value={settings.auto_redirect_delay}
+                            onChange={(e) => setEventDraft(prev => ({
+                              ...prev,
+                              confirmation_settings: {
+                                ...settings,
+                                auto_redirect_delay: parseInt(e.target.value) || 5
+                              }
+                            }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-between pt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep(6);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 6
+                  })));
+                }}
+                className="px-8"
+              >
+                ← Retour
+              </Button>
+              <Button
+                onClick={() => {
+                  handleSaveStep({ confirmation_settings: settings });
+                  // TODO: Save to database and navigate to dashboard
+                  navigate('/dashboard');
+                }}
+                disabled={!isStep7Valid}
                 className="px-8"
               >
                 Enregistrer et continuer →
