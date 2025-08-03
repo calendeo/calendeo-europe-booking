@@ -109,6 +109,10 @@ const CreateEvent = () => {
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<GuestFormQuestion | null>(null);
+  const [newRule, setNewRule] = useState<Partial<DisqualificationRule>>({
+    operator: 'is',
+    question_type: 'phone'
+  });
 
   // Color palette for event colors
   const colorOptions = [
@@ -1251,6 +1255,7 @@ const CreateEvent = () => {
             q.type === 'radio' || q.type === 'checkbox' || q.type === 'dropdown'
           ) || [])
         ];
+
 
         const [newRule, setNewRule] = useState<Partial<DisqualificationRule>>({
           operator: 'is',
