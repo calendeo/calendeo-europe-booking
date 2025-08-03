@@ -61,6 +61,12 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				calendeo: {
+					disabled: 'hsl(var(--calendeo-disabled))',
+					success: 'hsl(var(--calendeo-success))',
+					error: 'hsl(var(--calendeo-error))',
+					info: 'hsl(var(--calendeo-info))'
 				}
 			},
 			borderRadius: {
