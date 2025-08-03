@@ -14,16 +14,569 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analytics: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          period: Database["public"]["Enums"]["analytics_period"]
+          type: Database["public"]["Enums"]["analytics_type"]
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          period: Database["public"]["Enums"]["analytics_period"]
+          type: Database["public"]["Enums"]["analytics_type"]
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          period?: Database["public"]["Enums"]["analytics_period"]
+          type?: Database["public"]["Enums"]["analytics_type"]
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_slots: {
+        Row: {
+          created_at: string
+          end_time: string
+          exceptions: Json | null
+          id: string
+          start_time: string
+          timezone: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          exceptions?: Json | null
+          id?: string
+          start_time: string
+          timezone?: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          exceptions?: Json | null
+          id?: string
+          start_time?: string
+          timezone?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_slots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          status: Database["public"]["Enums"]["contact_status"]
+          timezone: string
+          utm_data: Json | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["contact_status"]
+          timezone?: string
+          utm_data?: Json | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["contact_status"]
+          timezone?: string
+          utm_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          calendar_link: string | null
+          created_at: string
+          created_by: string
+          date_time: string
+          duration: number
+          form_id: string | null
+          guest_id: string
+          host_ids: string[]
+          id: string
+          location: Database["public"]["Enums"]["event_location"]
+          name: string
+          status: Database["public"]["Enums"]["event_status"]
+          timezone: string
+          type: Database["public"]["Enums"]["event_type"]
+        }
+        Insert: {
+          calendar_link?: string | null
+          created_at?: string
+          created_by: string
+          date_time: string
+          duration: number
+          form_id?: string | null
+          guest_id: string
+          host_ids: string[]
+          id?: string
+          location?: Database["public"]["Enums"]["event_location"]
+          name: string
+          status?: Database["public"]["Enums"]["event_status"]
+          timezone?: string
+          type: Database["public"]["Enums"]["event_type"]
+        }
+        Update: {
+          calendar_link?: string | null
+          created_at?: string
+          created_by?: string
+          date_time?: string
+          duration?: number
+          form_id?: string | null
+          guest_id?: string
+          host_ids?: string[]
+          id?: string
+          location?: Database["public"]["Enums"]["event_location"]
+          name?: string
+          status?: Database["public"]["Enums"]["event_status"]
+          timezone?: string
+          type?: Database["public"]["Enums"]["event_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_questions: {
+        Row: {
+          condition_logic: Json | null
+          created_at: string
+          form_id: string
+          id: string
+          label: string
+          required: boolean
+          type: Database["public"]["Enums"]["question_type"]
+        }
+        Insert: {
+          condition_logic?: Json | null
+          created_at?: string
+          form_id: string
+          id?: string
+          label: string
+          required?: boolean
+          type: Database["public"]["Enums"]["question_type"]
+        }
+        Update: {
+          condition_logic?: Json | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          label?: string
+          required?: boolean
+          type?: Database["public"]["Enums"]["question_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_responses: {
+        Row: {
+          contact_id: string
+          created_at: string
+          form_id: string
+          id: string
+          question_id: string
+          response: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          form_id: string
+          id?: string
+          question_id: string
+          response: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          form_id?: string
+          id?: string
+          question_id?: string
+          response?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "form_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          created_at: string
+          created_by: string
+          disqualif_logic: Json | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          disqualif_logic?: Json | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          disqualif_logic?: Json | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations: {
+        Row: {
+          config: Json | null
+          created_at: string
+          id: string
+          status: Database["public"]["Enums"]["integration_status"]
+          tool: Database["public"]["Enums"]["integration_tool"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["integration_status"]
+          tool: Database["public"]["Enums"]["integration_tool"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["integration_status"]
+          tool?: Database["public"]["Enums"]["integration_tool"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          event_id: string | null
+          id: string
+          recipient: Database["public"]["Enums"]["notification_recipient"]
+          timing: string | null
+          trigger: Database["public"]["Enums"]["notification_trigger"]
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          event_id?: string | null
+          id?: string
+          recipient: Database["public"]["Enums"]["notification_recipient"]
+          timing?: string | null
+          trigger: Database["public"]["Enums"]["notification_trigger"]
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          event_id?: string | null
+          id?: string
+          recipient?: Database["public"]["Enums"]["notification_recipient"]
+          timing?: string | null
+          trigger?: Database["public"]["Enums"]["notification_trigger"]
+          type?: Database["public"]["Enums"]["notification_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          active: boolean
+          calendar_connected: boolean
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          priority: number
+          role: Database["public"]["Enums"]["app_role"]
+          slack_id: string | null
+          timezone: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          calendar_connected?: boolean
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          priority?: number
+          role?: Database["public"]["Enums"]["app_role"]
+          slack_id?: string | null
+          timezone?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          calendar_connected?: boolean
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          priority?: number
+          role?: Database["public"]["Enums"]["app_role"]
+          slack_id?: string | null
+          timezone?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_current_user_teams: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      user_in_team: {
+        Args: { _team_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      analytics_period: "day" | "week" | "month"
+      analytics_type: "meetings" | "conversion_rate" | "show_rate"
+      app_role: "super_admin" | "admin" | "closer" | "setter"
+      contact_status: "opportunity" | "lead" | "client"
+      event_location: "online" | "physical" | "custom"
+      event_status: "confirmed" | "canceled" | "rescheduled"
+      event_type: "1v1" | "group" | "round_robin"
+      integration_status: "connected" | "error" | "disconnected"
+      integration_tool: "google_calendar" | "slack" | "zapier" | "whatsapp"
+      notification_recipient: "guest" | "host" | "team" | "other"
+      notification_trigger: "booked" | "canceled" | "rescheduled" | "custom"
+      notification_type: "email" | "sms" | "slack"
+      question_type: "text" | "email" | "phone" | "dropdown" | "checkbox"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +703,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      analytics_period: ["day", "week", "month"],
+      analytics_type: ["meetings", "conversion_rate", "show_rate"],
+      app_role: ["super_admin", "admin", "closer", "setter"],
+      contact_status: ["opportunity", "lead", "client"],
+      event_location: ["online", "physical", "custom"],
+      event_status: ["confirmed", "canceled", "rescheduled"],
+      event_type: ["1v1", "group", "round_robin"],
+      integration_status: ["connected", "error", "disconnected"],
+      integration_tool: ["google_calendar", "slack", "zapier", "whatsapp"],
+      notification_recipient: ["guest", "host", "team", "other"],
+      notification_trigger: ["booked", "canceled", "rescheduled", "custom"],
+      notification_type: ["email", "sms", "slack"],
+      question_type: ["text", "email", "phone", "dropdown", "checkbox"],
+    },
   },
 } as const
