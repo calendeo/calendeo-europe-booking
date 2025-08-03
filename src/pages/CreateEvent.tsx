@@ -29,6 +29,24 @@ interface DisqualificationRule {
   expected_value: string;
 }
 
+interface Automation {
+  id?: string;
+  event_id: string;
+  name: string;
+  trigger_type: string;
+  trigger_timing: string;
+  trigger_offset_value?: number;
+  trigger_offset_unit?: string;
+  action_type: string;
+  action_payload: {
+    subject?: string;
+    message?: string;
+    email?: string;
+  };
+  is_active: boolean;
+  created_by?: string;
+}
+
 interface EventDraft {
   name?: string;
   color?: string;
@@ -114,6 +132,18 @@ const CreateEvent = () => {
     question_type: 'phone'
   });
 
+  // Automation states
+  const [availableEvents, setAvailableEvents] = useState<any[]>([]);
+  const [existingAutomations, setExistingAutomations] = useState<Automation[]>([]);
+  const [automationForm, setAutomationForm] = useState<Partial<Automation>>({
+    trigger_timing: 'after',
+    trigger_offset_value: 0,
+    trigger_offset_unit: 'minutes',
+    is_active: true,
+    action_payload: {}
+  });
+  const [automationStep, setAutomationStep] = useState(1); // 1: Details, 2: Trigger, 3: Action
+
   // Color palette for event colors
   const colorOptions = [
     '#1a6be3', '#57d084', '#f27c7c', '#ffa726', 
@@ -148,12 +178,32 @@ const CreateEvent = () => {
     }
   }, [eventDraft.name]);
 
+  // Fetch available events for automation
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('id, name')
+        .order('created_at', { ascending: false });
+      setAvailableEvents(data || []);
+    };
+    fetchEvents();
+  }, []);
+
+  // Fetch existing automations when event is selected (will be implemented once table is migrated)
+  useEffect(() => {
+    if (automationForm.event_id) {
+      // TODO: Fetch automations from database once table is migrated
+      setExistingAutomations([]);
+    }
+  }, [automationForm.event_id]);
+
   const [steps, setSteps] = useState<Step[]>([
     { id: 1, name: 'Détails', title: 'Informations de base', completed: false, active: true, locked: false },
     { id: 2, name: 'Horaires', title: 'Disponibilités', completed: false, active: false, locked: true },
     { id: 3, name: 'Formulaire', title: 'Questions pour les invités', completed: false, active: false, locked: true },
     { id: 4, name: 'Disqualifications', title: 'Règles de qualification', completed: false, active: false, locked: true },
-    { id: 5, name: 'Automatisations', title: 'Actions automatiques', completed: false, active: false, locked: true, comingSoon: true },
+    { id: 5, name: 'Automatisations', title: 'Actions automatiques', completed: false, active: false, locked: true },
     { id: 6, name: 'Notifications', title: 'Emails et rappels', completed: false, active: false, locked: true },
     { id: 7, name: 'Confirmation', title: 'Révision et publication', completed: false, active: false, locked: true },
   ]);
@@ -1637,6 +1687,423 @@ const CreateEvent = () => {
                   }
                 }}
                 disabled={!hasEligibleFields || !isStep4Valid}
+                className="px-8"
+              >
+                Enregistrer et continuer →
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 5:
+        const saveAutomation = async () => {
+          if (!automationForm.name || !automationForm.event_id || !automationForm.trigger_type || !automationForm.action_type) {
+            return;
+          }
+
+          try {
+            // TODO: Save to database once table is migrated
+            console.log('Saving automation:', automationForm);
+            
+            // Reset form and show success
+            setAutomationForm({
+              trigger_timing: 'after',
+              trigger_offset_value: 0,
+              trigger_offset_unit: 'minutes',
+              is_active: true,
+              action_payload: {}
+            });
+            setAutomationStep(1);
+            
+            // Refresh automations list
+            // TODO: Fetch from database
+            
+          } catch (error) {
+            console.error('Error saving automation:', error);
+          }
+        };
+
+        const deleteAutomation = async (id: string) => {
+          try {
+            // TODO: Delete from database once table is migrated
+            console.log('Deleting automation:', id);
+            setExistingAutomations(prev => prev.filter(a => a.id !== id));
+          } catch (error) {
+            console.error('Error deleting automation:', error);
+          }
+        };
+
+        const getTriggerLabel = (trigger: string) => {
+          const labels: Record<string, string> = {
+            'booking_created': 'Nouvelle réservation',
+            'event_rescheduled': 'L\'événement est replanifié',
+            'before_event_start': 'Avant que l\'événement démarre',
+            'event_started': 'L\'événement démarre',
+            'event_ended': 'L\'événement se termine',
+            'event_cancelled': 'L\'événement est annulé'
+          };
+          return labels[trigger] || trigger;
+        };
+
+        const getActionLabel = (action: string) => {
+          const labels: Record<string, string> = {
+            'email_guest': 'Email à l\'invité',
+            'email_host': 'Email à l\'organisateur',
+            'email_other': 'Email à quelqu\'un d\'autre',
+            'sms_guest': 'SMS à l\'invité',
+            'sms_host': 'SMS à l\'organisateur'
+          };
+          return labels[action] || action;
+        };
+
+        return (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Automatisations avancées
+              </h2>
+              <p className="text-muted-foreground">
+                Configurez des actions automatiques déclenchées par des événements.
+              </p>
+            </div>
+
+            <div className="bg-card p-6 rounded-xl border space-y-8">
+              {/* Section 1: Détails de l'automatisation */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    automationStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    1
+                  </div>
+                  <h3 className="text-lg font-medium">Détails de l'automatisation</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="automation-name">Nom de l'automatisation *</Label>
+                    <Input
+                      id="automation-name"
+                      placeholder="Ex: Email de confirmation"
+                      value={automationForm.name || ''}
+                      onChange={(e) => setAutomationForm(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="automation-event">Événement associé</Label>
+                    <Select
+                      value={automationForm.event_id || ''}
+                      onValueChange={(value) => setAutomationForm(prev => ({ ...prev, event_id: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un événement" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableEvents.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {automationStep === 1 && (
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => setAutomationStep(2)}
+                      disabled={!automationForm.name || !automationForm.event_id}
+                    >
+                      Suivant →
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 2: Déclencheur */}
+              {automationStep >= 2 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      automationStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      2
+                    </div>
+                    <h3 className="text-lg font-medium">Déclencheur</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="trigger-type">Lorsque ceci se produit</Label>
+                      <Select
+                        value={automationForm.trigger_type || ''}
+                        onValueChange={(value) => setAutomationForm(prev => ({ ...prev, trigger_type: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un déclencheur" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="booking_created">Nouvelle réservation</SelectItem>
+                          <SelectItem value="event_rescheduled">L'événement est replanifié</SelectItem>
+                          <SelectItem value="before_event_start">Avant que l'événement démarre</SelectItem>
+                          <SelectItem value="event_started">L'événement démarre</SelectItem>
+                          <SelectItem value="event_ended">L'événement se termine</SelectItem>
+                          <SelectItem value="event_cancelled">L'événement est annulé</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label>Délai</Label>
+                      <div className="space-y-3">
+                        <RadioGroup
+                          value={automationForm.trigger_offset_value === 0 ? 'immediate' : 'custom'}
+                          onValueChange={(value) => {
+                            if (value === 'immediate') {
+                              setAutomationForm(prev => ({ 
+                                ...prev, 
+                                trigger_offset_value: 0,
+                                trigger_timing: automationForm.trigger_type === 'before_event_start' ? 'before' : 'after'
+                              }));
+                            } else {
+                              setAutomationForm(prev => ({ 
+                                ...prev, 
+                                trigger_offset_value: 1,
+                                trigger_timing: automationForm.trigger_type === 'before_event_start' ? 'before' : 'after'
+                              }));
+                            }
+                          }}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="immediate" id="immediate" />
+                            <Label htmlFor="immediate">Immédiatement</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="custom" id="custom" />
+                            <Label htmlFor="custom">Combien de temps ?</Label>
+                          </div>
+                        </RadioGroup>
+
+                        {automationForm.trigger_offset_value !== 0 && (
+                          <div className="flex gap-2 ml-6">
+                            <Input
+                              type="number"
+                              min="1"
+                              className="w-24"
+                              value={automationForm.trigger_offset_value || 1}
+                              onChange={(e) => setAutomationForm(prev => ({ 
+                                ...prev, 
+                                trigger_offset_value: parseInt(e.target.value) || 1 
+                              }))}
+                            />
+                            <Select
+                              value={automationForm.trigger_offset_unit || 'minutes'}
+                              onValueChange={(value) => setAutomationForm(prev => ({ 
+                                ...prev, 
+                                trigger_offset_unit: value 
+                              }))}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="minutes">minutes</SelectItem>
+                                <SelectItem value="hours">heures</SelectItem>
+                                <SelectItem value="days">jours</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {automationStep === 2 && (
+                    <div className="flex justify-between">
+                      <Button
+                        variant="outline"
+                        onClick={() => setAutomationStep(1)}
+                      >
+                        ← Retour
+                      </Button>
+                      <Button
+                        onClick={() => setAutomationStep(3)}
+                        disabled={!automationForm.trigger_type}
+                      >
+                        Suivant →
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Section 3: Action */}
+              {automationStep >= 3 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      automationStep >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      3
+                    </div>
+                    <h3 className="text-lg font-medium">Action</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="action-type">Faire ceci</Label>
+                      <Select
+                        value={automationForm.action_type || ''}
+                        onValueChange={(value) => setAutomationForm(prev => ({ ...prev, action_type: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une action" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="email_guest">Envoyer un email à l'invité</SelectItem>
+                          <SelectItem value="email_host">Envoyer un email à l'organisateur</SelectItem>
+                          <SelectItem value="email_other">Envoyer un email à quelqu'un d'autre</SelectItem>
+                          <SelectItem value="sms_guest" disabled>Envoyer un SMS à l'invité (à venir)</SelectItem>
+                          <SelectItem value="sms_host" disabled>Envoyer un SMS à l'organisateur (à venir)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {automationForm.action_type?.startsWith('email') && (
+                      <div className="space-y-4">
+                        {automationForm.action_type === 'email_other' && (
+                          <div className="space-y-2">
+                            <Label htmlFor="action-email">Adresse email</Label>
+                            <Input
+                              id="action-email"
+                              type="email"
+                              placeholder="exemple@email.com"
+                              value={automationForm.action_payload?.email || ''}
+                              onChange={(e) => setAutomationForm(prev => ({ 
+                                ...prev, 
+                                action_payload: { ...prev.action_payload, email: e.target.value }
+                              }))}
+                            />
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label htmlFor="action-subject">Sujet</Label>
+                          <Input
+                            id="action-subject"
+                            placeholder="Sujet de l'email"
+                            value={automationForm.action_payload?.subject || ''}
+                            onChange={(e) => setAutomationForm(prev => ({ 
+                              ...prev, 
+                              action_payload: { ...prev.action_payload, subject: e.target.value }
+                            }))}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="action-message">Message</Label>
+                          <Textarea
+                            id="action-message"
+                            placeholder="Contenu de l'email"
+                            rows={4}
+                            value={automationForm.action_payload?.message || ''}
+                            onChange={(e) => setAutomationForm(prev => ({ 
+                              ...prev, 
+                              action_payload: { ...prev.action_payload, message: e.target.value }
+                            }))}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="automation-active"
+                        checked={automationForm.is_active}
+                        onCheckedChange={(checked) => setAutomationForm(prev => ({ ...prev, is_active: checked }))}
+                      />
+                      <Label htmlFor="automation-active">Automatisation activée</Label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => setAutomationStep(2)}
+                    >
+                      ← Retour
+                    </Button>
+                    <Button
+                      onClick={saveAutomation}
+                      disabled={!automationForm.action_type || 
+                        (automationForm.action_type?.startsWith('email') && (!automationForm.action_payload?.subject || !automationForm.action_payload?.message)) ||
+                        (automationForm.action_type === 'email_other' && !automationForm.action_payload?.email)}
+                    >
+                      + Ajouter et sauvegarder cette automatisation
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Liste des automatisations existantes */}
+            {existingAutomations.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Automatisations configurées</h3>
+                <div className="grid gap-3">
+                  {existingAutomations.map((automation) => (
+                    <div key={automation.id} className="bg-card p-4 rounded-lg border flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="font-medium">{automation.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {getTriggerLabel(automation.trigger_type)} → {getActionLabel(automation.action_type)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {automation.is_active ? 'Activée' : 'Désactivée'}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteAutomation(automation.id!)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep(4);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 4
+                  })));
+                }}
+                className="px-8"
+              >
+                ← Retour
+              </Button>
+              <Button 
+                onClick={() => {
+                  handleSaveStep(eventDraft);
+                  setCurrentStep(6);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 6,
+                    completed: s.id === 5 ? true : s.completed,
+                    locked: s.id === 6 ? false : s.locked
+                  })));
+                }}
                 className="px-8"
               >
                 Enregistrer et continuer →
