@@ -136,7 +136,7 @@ const CreateEvent = () => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        const isStep1Valid = eventDraft.name && eventDraft.host_ids && eventDraft.host_ids.length > 0;
+        const isStep1Valid = eventDraft.name; // Temporarily removed calendar connection requirement
         
         return (
           <div className="space-y-6">
