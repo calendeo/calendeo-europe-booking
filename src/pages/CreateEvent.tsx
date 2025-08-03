@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video } from 'lucide-react';
+import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,6 +27,21 @@ interface EventDraft {
   internal_note?: string;
   duration?: number;
   type?: string;
+  // Step 2 fields
+  booking_window_type?: 'custom' | 'unlimited';
+  booking_window_start?: string;
+  booking_window_end?: string;
+  slot_interval?: number;
+  timezone_behavior?: 'auto' | 'locked';
+  timezone_fixed?: string;
+  time_format?: '12h' | '24h';
+  buffers_enabled?: boolean;
+  buffer_before?: number;
+  buffer_after?: number;
+  reschedule_allowed_guest?: boolean;
+  reschedule_allowed_team?: boolean;
+  language?: 'fr' | 'en';
+  hide_cookie_banner?: boolean;
 }
 
 interface Step {
@@ -389,6 +406,356 @@ const CreateEvent = () => {
                 className="px-8"
               >
                 Enregistrer et continuer
+              </Button>
+            </div>
+          </div>
+        );
+      
+      case 2:
+        const isStep2Valid = eventDraft.duration && eventDraft.slot_interval;
+        
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Disponibilités et paramètres
+              </h2>
+              <p className="text-muted-foreground">
+                Configurez la durée, les créneaux et les paramètres de réservation.
+              </p>
+            </div>
+            
+            <div className="bg-card rounded-xl p-6 border space-y-8">
+              {/* Event Duration */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Durée de l'événement *
+                </Label>
+                <Select 
+                  value={eventDraft.duration?.toString()} 
+                  onValueChange={(value) => setEventDraft(prev => ({ ...prev, duration: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner la durée" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">60 minutes</SelectItem>
+                    <SelectItem value="90">90 minutes</SelectItem>
+                    <SelectItem value="120">120 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Booking Window */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Fenêtre de réservation
+                </Label>
+                <p className="text-sm text-muted-foreground mb-4">
+                  À quelle distance peut-on réserver cet événement ?
+                </p>
+                <RadioGroup 
+                  value={eventDraft.booking_window_type || 'custom'} 
+                  onValueChange={(value: 'custom' | 'unlimited') => 
+                    setEventDraft(prev => ({ ...prev, booking_window_type: value }))}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="custom" id="custom_window" />
+                    <Label htmlFor="custom_window">Choisir une fenêtre personnalisée</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="unlimited" id="unlimited_window" />
+                    <Label htmlFor="unlimited_window">Aucune limite (réservation à tout moment)</Label>
+                  </div>
+                </RadioGroup>
+
+                {eventDraft.booking_window_type === 'custom' && (
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="booking_start" className="text-sm text-muted-foreground">
+                        Date de début
+                      </Label>
+                      <Input
+                        id="booking_start"
+                        type="date"
+                        value={eventDraft.booking_window_start || ''}
+                        onChange={(e) => setEventDraft(prev => ({ ...prev, booking_window_start: e.target.value }))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="booking_end" className="text-sm text-muted-foreground">
+                        Date de fin
+                      </Label>
+                      <Input
+                        id="booking_end"
+                        type="date"
+                        value={eventDraft.booking_window_end || ''}
+                        onChange={(e) => setEventDraft(prev => ({ ...prev, booking_window_end: e.target.value }))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Slot Frequency */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Intervalle entre les créneaux *
+                </Label>
+                <Select 
+                  value={eventDraft.slot_interval?.toString()} 
+                  onValueChange={(value) => setEventDraft(prev => ({ ...prev, slot_interval: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner l'intervalle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="20">20 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">60 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Time Zone Behavior */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Comportement du fuseau horaire
+                </Label>
+                <RadioGroup 
+                  value={eventDraft.timezone_behavior || 'auto'} 
+                  onValueChange={(value: 'auto' | 'locked') => 
+                    setEventDraft(prev => ({ ...prev, timezone_behavior: value }))}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="auto" id="auto_timezone" />
+                    <Label htmlFor="auto_timezone">Détecter automatiquement le fuseau de l'invité</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="locked" id="locked_timezone" />
+                    <Label htmlFor="locked_timezone">Verrouiller le fuseau horaire (recommandé pour les événements en présentiel)</Label>
+                  </div>
+                </RadioGroup>
+
+                {eventDraft.timezone_behavior === 'locked' && (
+                  <div className="mt-4">
+                    <Select 
+                      value={eventDraft.timezone_fixed} 
+                      onValueChange={(value) => setEventDraft(prev => ({ ...prev, timezone_fixed: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un fuseau horaire" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Europe/Paris">Europe/Paris (CET)</SelectItem>
+                        <SelectItem value="Europe/London">Europe/London (GMT)</SelectItem>
+                        <SelectItem value="America/New_York">America/New_York (EST)</SelectItem>
+                        <SelectItem value="America/Los_Angeles">America/Los_Angeles (PST)</SelectItem>
+                        <SelectItem value="Asia/Tokyo">Asia/Tokyo (JST)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {/* Time Format */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Format d'heure
+                </Label>
+                <RadioGroup 
+                  value={eventDraft.time_format || '24h'} 
+                  onValueChange={(value: '12h' | '24h') => 
+                    setEventDraft(prev => ({ ...prev, time_format: value }))}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="12h" id="format_12h" />
+                    <Label htmlFor="format_12h">12h (AM/PM)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="24h" id="format_24h" />
+                    <Label htmlFor="format_24h">24h</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Buffers */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <Label className="text-sm font-medium text-foreground">
+                      Temps tampon
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Ajouter du temps avant et après l'événement
+                    </p>
+                  </div>
+                  <Switch
+                    checked={eventDraft.buffers_enabled || false}
+                    onCheckedChange={(checked) => setEventDraft(prev => ({ ...prev, buffers_enabled: checked }))}
+                  />
+                </div>
+
+                {eventDraft.buffers_enabled && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-2 block">
+                        Avant l'événement
+                      </Label>
+                      <Select 
+                        value={eventDraft.buffer_before?.toString()} 
+                        onValueChange={(value) => setEventDraft(prev => ({ ...prev, buffer_before: parseInt(value) }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Aucun" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">5 minutes</SelectItem>
+                          <SelectItem value="10">10 minutes</SelectItem>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="45">45 minutes</SelectItem>
+                          <SelectItem value="60">60 minutes</SelectItem>
+                          <SelectItem value="90">90 minutes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-2 block">
+                        Après l'événement
+                      </Label>
+                      <Select 
+                        value={eventDraft.buffer_after?.toString()} 
+                        onValueChange={(value) => setEventDraft(prev => ({ ...prev, buffer_after: parseInt(value) }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Aucun" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">5 minutes</SelectItem>
+                          <SelectItem value="10">10 minutes</SelectItem>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="45">45 minutes</SelectItem>
+                          <SelectItem value="60">60 minutes</SelectItem>
+                          <SelectItem value="90">90 minutes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Rescheduling Rules */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Règles de reprogrammation
+                </Label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="reschedule_guest"
+                      checked={eventDraft.reschedule_allowed_guest || false}
+                      onChange={(e) => setEventDraft(prev => ({ ...prev, reschedule_allowed_guest: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <Label htmlFor="reschedule_guest" className="text-sm">
+                      Permettre aux invités de reprogrammer cet événement
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="reschedule_team"
+                      checked={eventDraft.reschedule_allowed_team || false}
+                      onChange={(e) => setEventDraft(prev => ({ ...prev, reschedule_allowed_team: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <Label htmlFor="reschedule_team" className="text-sm">
+                      Permettre aux membres de l'équipe de reprogrammer cet événement
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Language */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-3 block">
+                  Langue de l'événement
+                </Label>
+                <Select 
+                  value={eventDraft.language || 'fr'} 
+                  onValueChange={(value: 'fr' | 'en') => setEventDraft(prev => ({ ...prev, language: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fr">Français</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Cookie Banner */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium text-foreground">
+                      Masquer la bannière de cookies Calendeo
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Utilisez cette option si votre site gère déjà le consentement aux cookies
+                    </p>
+                  </div>
+                  <Switch
+                    checked={eventDraft.hide_cookie_banner || false}
+                    onCheckedChange={(checked) => setEventDraft(prev => ({ ...prev, hide_cookie_banner: checked }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep(1);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 1
+                  })));
+                }}
+                className="px-8"
+              >
+                ← Retour
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (isStep2Valid) {
+                    handleSaveStep(eventDraft);
+                    setCurrentStep(3);
+                    setSteps(prev => prev.map(s => ({
+                      ...s,
+                      active: s.id === 3,
+                      completed: s.id === 2 ? true : s.completed,
+                      locked: s.id === 3 ? false : s.locked
+                    })));
+                  }
+                }}
+                disabled={!isStep2Valid}
+                className="px-8"
+              >
+                Enregistrer et continuer →
               </Button>
             </div>
           </div>
