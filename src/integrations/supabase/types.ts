@@ -546,6 +546,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      detect_abandoned_leads: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -557,6 +561,10 @@ export type Database = {
       get_current_user_teams: {
         Args: Record<PropertyKey, never>
         Returns: string[]
+      }
+      process_scheduled_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       user_in_team: {
         Args: { _team_id: string }
