@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Availability from "./pages/Availability";
 import Contacts from "./pages/Contacts";
@@ -31,12 +30,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={
+            <Route path="/" element={
               <ProtectedRoute>
-                <Dashboard />
+                <Home />
               </ProtectedRoute>
             } />
             <Route path="/calendar" element={
