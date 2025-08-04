@@ -174,6 +174,7 @@ const CreateEvent = () => {
   // Confirmation modal state
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [createdEvent, setCreatedEvent] = useState<any>(null);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const { toast } = useToast();
 
   // Color palette for event colors
@@ -273,10 +274,22 @@ const CreateEvent = () => {
   };
 
   const handleCreateEvent = async () => {
+    setIsCreatingEvent(true);
     try {
-      // Call the event-creation-flow edge function
+      // Validate required fields
+      if (!eventDraft.name || !eventDraft.duration || !eventDraft.host_ids?.length) {
+        toast({
+          title: "Données manquantes",
+          description: "Merci de compléter toutes les étapes avant de finaliser",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Call the event-creation-flow edge function with complete data
       const { data, error } = await supabase.functions.invoke('event-creation-flow', {
         body: {
+          // Step 1: Event details
           name: eventDraft.name,
           duration: eventDraft.duration || 30,
           type: eventDraft.type || 'consultation',
@@ -285,8 +298,39 @@ const CreateEvent = () => {
           color: eventDraft.color,
           slug: eventDraft.slug,
           description: eventDraft.description,
-          // Add notifications if any
+          mode: eventDraft.mode,
+          guest_limit: eventDraft.guest_limit,
+          show_remaining_spots: eventDraft.show_remaining_spots,
+          
+          // Step 2: Availability rules (currently handled in separate UI, for future implementation)
+          availability_rules: [], // TODO: Implement when availability UI is built
+          
+          // Step 3: Form data
+          form_data: eventDraft.guest_form,
+          
+          // Step 4: Disqualifications
+          disqualifications: eventDraft.disqualifications,
+          
+          // Step 6: Notifications
           notifications: notifications,
+          
+          // Step 7: Confirmation settings
+          confirmation_settings: {
+            booking_window_type: eventDraft.booking_window_type,
+            booking_window_start: eventDraft.booking_window_start,
+            booking_window_end: eventDraft.booking_window_end,
+            slot_interval: eventDraft.slot_interval,
+            timezone_behavior: eventDraft.timezone_behavior,
+            timezone_fixed: eventDraft.timezone_fixed,
+            time_format: eventDraft.time_format,
+            buffers_enabled: eventDraft.buffers_enabled,
+            buffer_before: eventDraft.buffer_before,
+            buffer_after: eventDraft.buffer_after,
+            reschedule_allowed_guest: eventDraft.reschedule_allowed_guest,
+            reschedule_allowed_team: eventDraft.reschedule_allowed_team,
+            language: eventDraft.language,
+            hide_cookie_banner: eventDraft.hide_cookie_banner
+          }
         }
       });
 
@@ -310,6 +354,11 @@ const CreateEvent = () => {
 
       // Show confirmation modal
       setIsConfirmationModalOpen(true);
+      
+      toast({
+        title: "Événement créé ✅",
+        description: "Votre événement a été créé avec succès !",
+      });
 
     } catch (error) {
       console.error('Error creating event:', error);
@@ -318,6 +367,8 @@ const CreateEvent = () => {
         description: "Une erreur s'est produite lors de la création de l'événement.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingEvent(false);
     }
   };
 
@@ -2636,11 +2687,11 @@ const CreateEvent = () => {
                 ← Retour aux notifications
               </Button>
               <Button
-                disabled={!isStep7Valid}
+                disabled={!isStep7Valid || isCreatingEvent}
                 onClick={() => handleSaveStep({})}
                 className="px-8"
               >
-                Créer l'événement
+                {isCreatingEvent ? "Création en cours..." : "Créer l'événement"}
               </Button>
             </div>
           </div>

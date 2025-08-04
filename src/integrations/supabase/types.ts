@@ -192,51 +192,147 @@ export type Database = {
         }
         Relationships: []
       }
+      event_availability_rules: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_time: string
+          event_id: string
+          id: string
+          start_time: string
+          timezone: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          end_time: string
+          event_id: string
+          id?: string
+          start_time: string
+          timezone?: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_time?: string
+          event_id?: string
+          id?: string
+          start_time?: string
+          timezone?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
+      event_notifications: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_id: string
+          id: string
+          is_active: boolean
+          message: string
+          offset_type: string
+          offset_unit: string
+          offset_value: number
+          recipient_type: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          event_id: string
+          id?: string
+          is_active?: boolean
+          message: string
+          offset_type: string
+          offset_unit: string
+          offset_value: number
+          recipient_type: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          offset_type?: string
+          offset_unit?: string
+          offset_value?: number
+          recipient_type?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           calendar_link: string | null
+          color: string | null
+          confirmation_settings: Json | null
           created_at: string
           created_by: string
           date_time: string
+          description: string | null
           duration: number
           form_id: string | null
           guest_id: string
+          guest_limit: number | null
           host_ids: string[]
           id: string
           location: Database["public"]["Enums"]["event_location"]
+          mode: string | null
           name: string
+          show_remaining_spots: boolean | null
+          slug: string | null
           status: Database["public"]["Enums"]["event_status"]
           timezone: string
           type: Database["public"]["Enums"]["event_type"]
         }
         Insert: {
           calendar_link?: string | null
+          color?: string | null
+          confirmation_settings?: Json | null
           created_at?: string
           created_by: string
           date_time: string
+          description?: string | null
           duration: number
           form_id?: string | null
           guest_id: string
+          guest_limit?: number | null
           host_ids: string[]
           id?: string
           location?: Database["public"]["Enums"]["event_location"]
+          mode?: string | null
           name: string
+          show_remaining_spots?: boolean | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["event_status"]
           timezone?: string
           type: Database["public"]["Enums"]["event_type"]
         }
         Update: {
           calendar_link?: string | null
+          color?: string | null
+          confirmation_settings?: Json | null
           created_at?: string
           created_by?: string
           date_time?: string
+          description?: string | null
           duration?: number
           form_id?: string | null
           guest_id?: string
+          guest_limit?: number | null
           host_ids?: string[]
           id?: string
           location?: Database["public"]["Enums"]["event_location"]
+          mode?: string | null
           name?: string
+          show_remaining_spots?: boolean | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["event_status"]
           timezone?: string
           type?: Database["public"]["Enums"]["event_type"]
