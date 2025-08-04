@@ -58,7 +58,7 @@ const Settings = () => {
         .from('users')
         .select('id, first_name, last_name, email, timezone')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       
@@ -67,13 +67,29 @@ const Settings = () => {
           ...data,
           email: user?.email || data.email,
         });
+      } else {
+        // Create a default profile if none exists
+        setProfile({
+          id: '',
+          first_name: '',
+          last_name: '',
+          email: user?.email || '',
+          timezone: 'Europe/Paris',
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      // Create a fallback profile even on error
+      setProfile({
+        id: '',
+        first_name: '',
+        last_name: '',
+        email: user?.email || '',
+        timezone: 'Europe/Paris',
+      });
       toast({
-        title: 'Erreur',
-        description: 'Impossible de charger votre profil.',
-        variant: 'destructive',
+        title: 'Information',
+        description: 'Profil créé automatiquement. Veuillez remplir vos informations.',
       });
     } finally {
       setLoading(false);
@@ -96,16 +112,39 @@ const Settings = () => {
     
     setSaving('profile');
     try {
-      const { error } = await supabase
+      // Check if user exists, if not create them first
+      const { data: existingUser } = await supabase
         .from('users')
-        .update({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          timezone: profile.timezone,
-        })
-        .eq('user_id', user?.id);
+        .select('id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (!existingUser) {
+        // Create new user record
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            user_id: user?.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            email: profile.email,
+            timezone: profile.timezone,
+          });
+
+        if (insertError) throw insertError;
+      } else {
+        // Update existing user record
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            timezone: profile.timezone,
+          })
+          .eq('user_id', user?.id);
+
+        if (updateError) throw updateError;
+      }
 
       toast({
         title: 'Succès',
