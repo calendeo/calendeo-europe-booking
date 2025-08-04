@@ -604,6 +604,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          calendar_view: string
+          created_at: string
+          id: string
+          language: string
+          notifications: boolean
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          calendar_view?: string
+          created_at?: string
+          id: string
+          language?: string
+          notifications?: boolean
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          calendar_view?: string
+          created_at?: string
+          id?: string
+          language?: string
+          notifications?: boolean
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           active: boolean
