@@ -44,7 +44,7 @@ const navigationItems = [
   { title: 'Contacts', url: '/contacts', icon: Users },
   { title: 'Team', url: '/team', icon: UserPlus },
   { title: 'Automations', url: '/automations', icon: Settings },
-  { title: 'Forms', url: '/forms', icon: FileText },
+  { title: 'Formulaires', url: '/forms', icon: FileText },
   { title: 'Analytics', url: '/analytics', icon: BarChart2 },
   { title: 'Integrations', url: '/integrations', icon: Link },
   { title: 'Settings', url: '/settings', icon: Sliders },
