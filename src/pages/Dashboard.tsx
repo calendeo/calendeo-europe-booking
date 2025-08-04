@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import AppHeader from '@/components/AppHeader';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { EventsSection } from '@/components/dashboard/EventsSection';
 import { CreateEventModal } from '@/components/dashboard/CreateEventModal';
@@ -69,6 +70,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AppHeader />
       <DashboardHeader />
       
       <main className="container mx-auto px-4 py-8">
