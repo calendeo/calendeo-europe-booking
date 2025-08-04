@@ -13,6 +13,7 @@ import Contacts from "./pages/Contacts";
 import Team from "./pages/Team";
 import Automations from "./pages/Automations";
 import Forms from "./pages/Forms";
+import FormDetail from "./pages/FormDetail";
 import Analytics from "./pages/Analytics";
 import Integrations from "./pages/Integrations";
 import Settings from "./pages/Settings";
@@ -66,6 +67,11 @@ const App = () => (
             <Route path="/forms" element={
               <ProtectedRoute>
                 <Forms />
+              </ProtectedRoute>
+            } />
+            <Route path="/forms/:formId" element={
+              <ProtectedRoute>
+                <FormDetail />
               </ProtectedRoute>
             } />
             <Route path="/analytics" element={

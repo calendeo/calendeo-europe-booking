@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Move, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -540,7 +541,14 @@ const Forms = () => {
                 <TableBody>
                   {filteredForms.map((form) => (
                     <TableRow key={form.id}>
-                      <TableCell className="font-medium">{form.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link 
+                          to={`/forms/${form.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {form.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
                           Brouillon
