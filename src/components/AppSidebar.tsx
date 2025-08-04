@@ -38,6 +38,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const navigationItems = [
+  { title: 'Dashboard', url: '/', icon: Home },
   { title: 'Calendar', url: '/calendar', icon: Calendar },
   { title: 'Availability', url: '/availability', icon: Clock },
   { title: 'Contacts', url: '/contacts', icon: Users },
