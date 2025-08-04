@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video, Clock, Plus, Edit2, Trash2, GripVertical, FileText, AlignLeft, CheckSquare, Circle, ChevronDown, Link } from 'lucide-react';
+import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video, Clock, Plus, Edit2, Trash2, GripVertical, FileText, AlignLeft, CheckSquare, Circle, ChevronDown, Link, Copy, ExternalLink, Share, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface GuestFormQuestion {
   id: string;
@@ -170,6 +171,11 @@ const CreateEvent = () => {
     message: ''
   });
 
+  // Confirmation modal state
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [createdEvent, setCreatedEvent] = useState<any>(null);
+  const { toast } = useToast();
+
   // Color palette for event colors
   const colorOptions = [
     '#1a6be3', '#57d084', '#f27c7c', '#ffa726', 
@@ -245,8 +251,14 @@ const CreateEvent = () => {
     }
   };
 
-  const handleSaveStep = (stepData: Partial<EventDraft>) => {
+  const handleSaveStep = async (stepData: Partial<EventDraft>) => {
     setEventDraft(prev => ({ ...prev, ...stepData }));
+    
+    // If this is step 7 (final step), create the event
+    if (currentStep === 7) {
+      await handleCreateEvent();
+      return;
+    }
     
     // Mark current step as completed and unlock next step
     setSteps(prev => prev.map(s => {
@@ -258,6 +270,116 @@ const CreateEvent = () => {
       }
       return s;
     }));
+  };
+
+  const handleCreateEvent = async () => {
+    try {
+      // Call the event-creation-flow edge function
+      const { data, error } = await supabase.functions.invoke('event-creation-flow', {
+        body: {
+          name: eventDraft.name,
+          duration: eventDraft.duration || 30,
+          type: eventDraft.type || 'consultation',
+          location: eventDraft.location || 'zoom',
+          host_ids: eventDraft.host_ids || [],
+          color: eventDraft.color,
+          slug: eventDraft.slug,
+          description: eventDraft.description,
+          // Add notifications if any
+          notifications: notifications,
+        }
+      });
+
+      if (error) {
+        console.error('Error creating event:', error);
+        toast({
+          title: "Erreur",
+          description: "Une erreur s'est produite lors de la création de l'événement.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Store the created event data
+      setCreatedEvent(data);
+      
+      // Mark step 7 as completed
+      setSteps(prev => prev.map(s => 
+        s.id === 7 ? { ...s, completed: true } : s
+      ));
+
+      // Show confirmation modal
+      setIsConfirmationModalOpen(true);
+
+    } catch (error) {
+      console.error('Error creating event:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la création de l'événement.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (createdEvent?.slug) {
+      const bookingUrl = `${window.location.origin}/book/${createdEvent.slug}`;
+      try {
+        await navigator.clipboard.writeText(bookingUrl);
+        toast({
+          title: "Lien copié ✅",
+          description: "Le lien de réservation a été copié dans le presse-papier.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de copier le lien.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleViewBookingPage = () => {
+    if (createdEvent?.slug) {
+      const bookingUrl = `${window.location.origin}/book/${createdEvent.slug}`;
+      window.open(bookingUrl, '_blank');
+    }
+  };
+
+  const handleShare = () => {
+    // This could open a share modal with options for email, social, etc.
+    // For now, we'll just copy the link and show a different message
+    handleCopyLink();
+  };
+
+  const handleReturnToDashboard = () => {
+    setIsConfirmationModalOpen(false);
+    // Reset the event draft
+    setEventDraft({
+      color: '#1a6be3',
+      mode: 'private',
+      guest_form: {
+        include_last_name: false,
+        include_email: false,
+        custom_questions: []
+      },
+      disqualifications: {
+        rules: [],
+        logic_type: 'OR',
+        message: 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
+        redirect_enabled: false,
+        redirect_with_params: false
+      }
+    });
+    setCurrentStep(1);
+    setSteps(prev => prev.map(s => ({
+      ...s,
+      completed: false,
+      active: s.id === 1,
+      locked: s.id !== 1
+    })));
+    navigate('/dashboard');
   };
 
   const renderStepContent = () => {
@@ -2412,6 +2534,118 @@ const CreateEvent = () => {
           </div>
         );
       
+      case 7:
+        const isStep7Valid = eventDraft.name && eventDraft.host_ids?.length;
+        
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Révision et publication
+              </h2>
+              <p className="text-muted-foreground">
+                Vérifiez les détails de votre événement avant de le publier.
+              </p>
+            </div>
+            
+            <div className="bg-card rounded-xl p-6 border space-y-6">
+              {/* Event Summary */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground">Résumé de l'événement</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Nom</Label>
+                    <p className="text-foreground">{eventDraft.name}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Durée</Label>
+                    <p className="text-foreground">{eventDraft.duration || 30} minutes</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Type</Label>
+                    <p className="text-foreground capitalize">{eventDraft.mode}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Lieu</Label>
+                    <p className="text-foreground capitalize">{eventDraft.location}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Organisateurs</Label>
+                    <p className="text-foreground">
+                      {eventDraft.host_ids?.length || 0} organisateur(s) sélectionné(s)
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Lien</Label>
+                    <p className="text-foreground">calendeo.app/{eventDraft.slug}</p>
+                  </div>
+                </div>
+                
+                {eventDraft.description && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                    <p className="text-foreground">{eventDraft.description}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Notifications Summary */}
+              {notifications.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-foreground">Notifications configurées</h3>
+                  <div className="space-y-2">
+                    {notifications.map((notification, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium">{notification.subject}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {notification.recipient_type} - {notification.offset_value} {notification.offset_unit} {notification.offset_type === 'before' ? 'avant' : 'après'}
+                          </p>
+                        </div>
+                        <span className={cn(
+                          "text-xs px-2 py-1 rounded",
+                          notification.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+                        )}>
+                          {notification.is_active ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-between items-center pt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep(6);
+                  setSteps(prev => prev.map(s => ({
+                    ...s,
+                    active: s.id === 6
+                  })));
+                }}
+              >
+                ← Retour aux notifications
+              </Button>
+              <Button
+                disabled={!isStep7Valid}
+                onClick={() => handleSaveStep({})}
+                className="px-8"
+              >
+                Créer l'événement
+              </Button>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="flex items-center justify-center h-64">
@@ -2516,6 +2750,72 @@ const CreateEvent = () => {
           {renderStepContent()}
         </main>
       </div>
+
+      {/* Success Confirmation Modal */}
+      <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-center">
+              🎉 Votre événement a été créé avec succès !
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Success animation/checkmark */}
+            <div className="flex justify-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <Check className="w-8 h-8 text-green-600" />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <p className="text-foreground font-medium">{eventDraft.name}</p>
+              <p className="text-sm text-muted-foreground">
+                Votre événement est maintenant disponible pour réservation
+              </p>
+            </div>
+            
+            {/* Action buttons */}
+            <div className="space-y-3">
+              <Button
+                onClick={handleCopyLink}
+                className="w-full justify-start gap-3"
+                variant="default"
+              >
+                <Copy className="w-4 h-4" />
+                Copier le lien
+              </Button>
+              
+              <Button
+                onClick={handleViewBookingPage}
+                className="w-full justify-start gap-3"
+                variant="secondary"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Voir ma page de réservation
+              </Button>
+              
+              <Button
+                onClick={handleShare}
+                className="w-full justify-start gap-3"
+                variant="secondary"
+              >
+                <Share className="w-4 h-4" />
+                Partager
+              </Button>
+              
+              <Button
+                onClick={handleReturnToDashboard}
+                className="w-full justify-start gap-3"
+                variant="default"
+              >
+                <Home className="w-4 h-4" />
+                Retour au dashboard
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
