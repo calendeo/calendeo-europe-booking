@@ -8,6 +8,9 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { EventsSection } from '@/components/dashboard/EventsSection';
 import { CreateEventModal } from '@/components/dashboard/CreateEventModal';
 import { ShareEventModal } from '@/components/dashboard/ShareEventModal';
+import { useGoogleCalendar } from '@/hooks/use-google-calendar';
+import { GoogleCalendarConnectButton } from '@/components/GoogleCalendarConnectButton';
+import { GoogleCalendarBadge } from '@/components/GoogleCalendarBadge';
 
 interface Event {
   id: string;
@@ -21,6 +24,7 @@ interface Event {
 
 const Home = () => {
   const { user, loading } = useAuth();
+  const { isConnected: googleConnected, isLoading: googleLoading } = useGoogleCalendar();
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -33,6 +37,29 @@ const Home = () => {
       fetchEvents();
     }
   }, [user]);
+
+  // Check for Google sync status in URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleSync = urlParams.get('google_sync');
+    
+    if (googleSync === 'success') {
+      toast({
+        title: 'Connexion réussie ✅',
+        description: 'Votre agenda Google a été connecté avec succès !',
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard');
+    } else if (googleSync === 'error') {
+      toast({
+        title: 'Erreur de connexion',
+        description: 'Une erreur est survenue lors de la connexion à Google Calendar.',
+        variant: 'destructive',
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [toast]);
 
   const fetchEvents = async () => {
     try {
@@ -93,6 +120,28 @@ const Home = () => {
     <AppLayout>
       <div>
         <DashboardHeader />
+        
+        {/* Google Calendar Integration Section */}
+        <div className="mt-6 mb-8 px-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Intégration calendrier</h2>
+              <p className="text-sm text-muted-foreground">
+                Connectez votre agenda Google pour synchroniser vos disponibilités
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {!googleLoading && (
+                googleConnected ? (
+                  <GoogleCalendarBadge />
+                ) : (
+                  <GoogleCalendarConnectButton />
+                )
+              )}
+            </div>
+          </div>
+        </div>
         
         <div className="mt-8">
           <EventsSection 

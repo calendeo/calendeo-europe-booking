@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Check, Users, MapPin, Globe, Phone, Video, Clock, Plus, Edit2, Trash2, GripVertical, FileText, AlignLeft, CheckSquare, Circle, ChevronDown, Link, Copy, ExternalLink, Share, Home } from 'lucide-react';
+import { useGoogleCalendar } from '@/hooks/use-google-calendar';
+import { GoogleCalendarAlert } from '@/components/GoogleCalendarAlert';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -121,6 +123,7 @@ interface Step {
 
 const CreateEvent = () => {
   const navigate = useNavigate();
+  const { isConnected: googleConnected, isLoading: googleLoading } = useGoogleCalendar();
   const [currentStep, setCurrentStep] = useState(1);
   const [eventDraft, setEventDraft] = useState<EventDraft>({
     color: '#1a6be3',
@@ -210,6 +213,30 @@ const CreateEvent = () => {
       setEventDraft(prev => ({ ...prev, slug: generateSlug(eventDraft.name || '') }));
     }
   }, [eventDraft.name]);
+
+  // Check for Google sync status in URL params and refresh connection status
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleSync = urlParams.get('google_sync');
+    
+    if (googleSync === 'success') {
+      toast({
+        title: 'Connexion réussie ✅',
+        description: 'Votre agenda Google a été connecté avec succès ! Vous pouvez maintenant continuer la création de votre événement.',
+      });
+      // Clean up URL and reload to refresh connection status
+      window.history.replaceState({}, '', '/create-event');
+      window.location.reload();
+    } else if (googleSync === 'error') {
+      toast({
+        title: 'Erreur de connexion',
+        description: 'Une erreur est survenue lors de la connexion à Google Calendar.',
+        variant: 'destructive',
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/create-event');
+    }
+  }, [toast]);
 
   // Fetch available events for automation
   useEffect(() => {
@@ -509,6 +536,13 @@ const CreateEvent = () => {
                 </RadioGroup>
               </div>
 
+              {/* Google Calendar Alert */}
+              {!googleLoading && !googleConnected && (
+                <div className="mb-6">
+                  <GoogleCalendarAlert />
+                </div>
+              )}
+
               {/* Organizers */}
               <div>
                 <Label className="text-sm font-medium text-foreground mb-3 block">
@@ -517,7 +551,7 @@ const CreateEvent = () => {
                 {availableUsers.length === 0 ? (
                   <div className="p-4 bg-accent/50 rounded-lg border border-accent">
                     <p className="text-sm text-muted-foreground">
-                      Pour continuer la création de votre événement, vous devez connecter un calendrier et enregistrer vos disponibilités.
+                      Aucun organisateur disponible. Connectez votre agenda Google pour voir vos disponibilités.
                     </p>
                   </div>
                 ) : (
