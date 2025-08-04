@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import AppHeader from '@/components/AppHeader';
+import { AppLayout } from '@/components/AppLayout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { EventsSection } from '@/components/dashboard/EventsSection';
 import { CreateEventModal } from '@/components/dashboard/CreateEventModal';
@@ -69,31 +69,32 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader />
-      <DashboardHeader />
-      
-      <main className="container mx-auto px-4 py-8">
-        <EventsSection 
-          events={events}
-          loading={loading}
-          onCreateEvent={handleCreateEvent}
-          onShareEvent={handleShareEvent}
+    <AppLayout>
+      <div>
+        <DashboardHeader />
+        
+        <div className="mt-8">
+          <EventsSection 
+            events={events}
+            loading={loading}
+            onCreateEvent={handleCreateEvent}
+            onShareEvent={handleShareEvent}
+          />
+        </div>
+
+        <CreateEventModal 
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          onEventCreated={handleEventCreated}
         />
-      </main>
 
-      <CreateEventModal 
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
-        onEventCreated={handleEventCreated}
-      />
-
-      <ShareEventModal 
-        open={showShareModal}
-        onOpenChange={setShowShareModal}
-        event={selectedEvent}
-      />
-    </div>
+        <ShareEventModal 
+          open={showShareModal}
+          onOpenChange={setShowShareModal}
+          event={selectedEvent}
+        />
+      </div>
+    </AppLayout>
   );
 };
 

@@ -5,8 +5,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Index from "./pages/Index";
+import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
+import Calendar from "./pages/Calendar";
+import Availability from "./pages/Availability";
+import Contacts from "./pages/Contacts";
+import Team from "./pages/Team";
+import Automations from "./pages/Automations";
+import Forms from "./pages/Forms";
+import Analytics from "./pages/Analytics";
+import Integrations from "./pages/Integrations";
+import Settings from "./pages/Settings";
 import CreateEvent from "./pages/CreateEvent";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -22,12 +31,57 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/calendar" element={
+              <ProtectedRoute>
+                <Calendar />
+              </ProtectedRoute>
+            } />
+            <Route path="/availability" element={
+              <ProtectedRoute>
+                <Availability />
+              </ProtectedRoute>
+            } />
+            <Route path="/contacts" element={
+              <ProtectedRoute>
+                <Contacts />
+              </ProtectedRoute>
+            } />
+            <Route path="/team" element={
+              <ProtectedRoute>
+                <Team />
+              </ProtectedRoute>
+            } />
+            <Route path="/automations" element={
+              <ProtectedRoute>
+                <Automations />
+              </ProtectedRoute>
+            } />
+            <Route path="/forms" element={
+              <ProtectedRoute>
+                <Forms />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/integrations" element={
+              <ProtectedRoute>
+                <Integrations />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } />
             <Route path="/create-event" element={
