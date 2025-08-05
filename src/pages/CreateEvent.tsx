@@ -214,27 +214,29 @@ const CreateEvent = () => {
     }
   }, [eventDraft.name]);
 
-  // Check for Google sync status in URL params and refresh connection status
+  // Check for Google auth status in URL params and refresh connection status
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const googleSync = urlParams.get('google_sync');
+    const authStatus = urlParams.get('auth');
     
-    if (googleSync === 'success') {
+    if (authStatus === 'google-success') {
       toast({
-        title: 'Connexion réussie ✅',
-        description: 'Votre agenda Google a été connecté avec succès ! Vous pouvez maintenant continuer la création de votre événement.',
+        title: '🎉 Votre compte Google a bien été connecté !',
+        description: 'Vous pouvez maintenant continuer la création de votre événement.',
       });
       // Clean up URL and reload to refresh connection status
-      window.history.replaceState({}, '', '/create-event');
-      window.location.reload();
-    } else if (googleSync === 'error') {
+      setTimeout(() => {
+        window.history.replaceState(null, '', window.location.pathname);
+        window.location.reload();
+      }, 2000);
+    } else if (authStatus === 'google-error') {
       toast({
         title: 'Erreur de connexion',
         description: 'Une erreur est survenue lors de la connexion à Google Calendar.',
         variant: 'destructive',
       });
       // Clean up URL
-      window.history.replaceState({}, '', '/create-event');
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, [toast]);
 

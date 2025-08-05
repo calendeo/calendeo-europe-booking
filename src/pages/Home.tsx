@@ -38,26 +38,28 @@ const Home = () => {
     }
   }, [user]);
 
-  // Check for Google sync status in URL params
+  // Check for Google auth status in URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const googleSync = urlParams.get('google_sync');
+    const authStatus = urlParams.get('auth');
     
-    if (googleSync === 'success') {
+    if (authStatus === 'google-success') {
       toast({
-        title: 'Connexion réussie ✅',
-        description: 'Votre agenda Google a été connecté avec succès !',
+        title: '🎉 Votre compte Google a bien été connecté !',
+        description: 'Synchronisation activée avec succès.',
       });
-      // Clean up URL
-      window.history.replaceState({}, '', '/dashboard');
-    } else if (googleSync === 'error') {
+      // Clean up URL after 5 seconds
+      setTimeout(() => {
+        window.history.replaceState(null, '', window.location.pathname);
+      }, 5000);
+    } else if (authStatus === 'google-error') {
       toast({
         title: 'Erreur de connexion',
         description: 'Une erreur est survenue lors de la connexion à Google Calendar.',
         variant: 'destructive',
       });
       // Clean up URL
-      window.history.replaceState({}, '', '/dashboard');
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, [toast]);
 

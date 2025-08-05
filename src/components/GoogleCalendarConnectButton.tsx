@@ -7,13 +7,17 @@ import { useGoogleCalendar } from '@/hooks/use-google-calendar';
 interface GoogleCalendarConnectButtonProps {
   variant?: 'primary' | 'secondary';
   className?: string;
+  isConnected?: boolean;
 }
 
 export const GoogleCalendarConnectButton: React.FC<GoogleCalendarConnectButtonProps> = ({ 
   variant = 'primary',
-  className 
+  className,
+  isConnected = false
 }) => {
-  const { getOAuthUrl } = useGoogleCalendar();
+  const { getOAuthUrl, isConnected: hookConnected } = useGoogleCalendar();
+  
+  const connected = isConnected || hookConnected;
 
   const handleConnect = () => {
     window.location.href = getOAuthUrl();
@@ -24,16 +28,30 @@ export const GoogleCalendarConnectButton: React.FC<GoogleCalendarConnectButtonPr
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            onClick={handleConnect}
-            variant={variant === 'primary' ? 'default' : 'secondary'}
+            onClick={connected ? undefined : handleConnect}
+            variant={connected ? 'secondary' : (variant === 'primary' ? 'default' : 'secondary')}
             className={className}
+            disabled={connected}
           >
-            <Calendar className="w-4 h-4 mr-2" />
-            Connecter mon agenda Google
+            {connected ? (
+              <>
+                <Calendar className="w-4 h-4 mr-2" />
+                ✅ Connecté
+              </>
+            ) : (
+              <>
+                <Calendar className="w-4 h-4 mr-2" />
+                Connecter mon agenda Google
+              </>
+            )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Connexion requise pour synchroniser vos disponibilités et vos événements automatiquement.</p>
+          {connected ? (
+            <p>Votre agenda Google est connecté et synchronisé.</p>
+          ) : (
+            <p>Connexion requise pour synchroniser vos disponibilités et vos événements automatiquement.</p>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

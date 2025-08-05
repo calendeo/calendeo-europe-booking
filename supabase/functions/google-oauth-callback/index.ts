@@ -20,13 +20,13 @@ Deno.serve(async (req) => {
 
     if (!code) {
       console.error('Missing authorization code');
-      return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     const client_secret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     if (!client_secret) {
       console.error('Missing GOOGLE_CLIENT_SECRET environment variable');
-      return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     // Exchange code for tokens
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('Token exchange failed:', errorText);
-      return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     const tokenData = await tokenResponse.json();
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     if (!access_token) {
       console.error('No access token received');
-      return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     // Get user info
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     if (!userInfoResponse.ok) {
       const errorText = await userInfoResponse.text();
       console.error('Failed to fetch user info:', errorText);
-      return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     const userInfo = await userInfoResponse.json();
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     if (!email) {
       console.error('No email received from Google');
-      return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     // Initialize Supabase client
@@ -111,16 +111,28 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error('Database error:', error);
-      return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     console.log('Tokens stored successfully');
 
+    // Update user's google_connected status
+    console.log('Updating user google_connected status...');
+    const { error: userUpdateError } = await supabase
+      .from('users')
+      .update({ calendar_connected: true })
+      .eq('email', email);
+
+    if (userUpdateError) {
+      console.error('Error updating user status:', userUpdateError);
+      // Don't fail the flow for this error, just log it
+    }
+
     // Redirect to success page
-    return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=success', 302);
+    return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-success', 302);
 
   } catch (error) {
     console.error('Unexpected error:', error);
-    return Response.redirect('https://calendeo.lovable.app/dashboard?google_sync=error', 302);
+    return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
   }
 });
