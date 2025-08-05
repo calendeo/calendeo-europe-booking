@@ -10,7 +10,7 @@ export const GoogleCalendarBadge: React.FC<GoogleCalendarBadgeProps> = ({ classN
   return (
     <Badge variant="secondary" className={`bg-emerald-50 text-emerald-700 border-emerald-200 ${className}`}>
       <CheckCircle className="w-3 h-3 mr-1" />
-      Connecté à Google Calendar
+      Connecté à Google
     </Badge>
   );
 };

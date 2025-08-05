@@ -44,7 +44,7 @@ export const useGoogleCalendar = () => {
     const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
     const params = new URLSearchParams({
       client_id: '688791541113-ah93qkvrdufodi468earvmht2k54si2n.apps.googleusercontent.com',
-      redirect_uri: 'https://calendeo.lovable.app/api/oauth/callback',
+      redirect_uri: 'https://calendeo.io/api/oauth/callback',
       response_type: 'code',
       scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email',
       access_type: 'offline',
