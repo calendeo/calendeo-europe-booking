@@ -23,10 +23,10 @@ Deno.serve(async (req) => {
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
-    // Get environment variables
-    const client_id = Deno.env.get('GOOGLE_CLIENT_ID');
+    // Get environment variables  
+    const client_id = '688791541113-ah93qkvrdufodi468earvmht2k54si2n.apps.googleusercontent.com';
     const client_secret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-    const redirect_uri = Deno.env.get('GOOGLE_REDIRECT_URI');
+    const redirect_uri = 'https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/oauth-callback';
 
     if (!client_id || !client_secret || !redirect_uri) {
       console.error('Missing Google OAuth credentials:', { 
