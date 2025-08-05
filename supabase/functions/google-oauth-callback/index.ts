@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
 
-    console.log('OAuth callback received:', { code: code ? 'present' : 'missing' });
+    console.log('Google OAuth callback received:', { code: code ? 'present' : 'missing' });
 
     // Check if code is present
     if (!code) {
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     // Get environment variables  
     const client_id = '688791541113-ah93qkvrdufodi468earvmht2k54si2n.apps.googleusercontent.com';
     const client_secret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-    const redirect_uri = 'https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/oauth-callback';
+    const redirect_uri = 'https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/google-oauth-callback';
 
     if (!client_id || !client_secret || !redirect_uri) {
       console.error('Missing Google OAuth credentials:', { 
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
     return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-success', 302);
 
   } catch (error) {
-    console.error('Unexpected error in OAuth callback:', error);
+    console.error('Unexpected error in Google OAuth callback:', error);
     return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
   }
 });

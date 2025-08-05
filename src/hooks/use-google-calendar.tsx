@@ -61,9 +61,9 @@ export const useGoogleCalendar = () => {
     const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
     const params = new URLSearchParams({
       client_id: '688791541113-ah93qkvrdufodi468earvmht2k54si2n.apps.googleusercontent.com',
-      redirect_uri: 'https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/oauth-callback',
+      redirect_uri: 'https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/google-oauth-callback',
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email',
+      scope: 'email https://www.googleapis.com/auth/calendar',
       access_type: 'offline',
       prompt: 'consent'
     });

@@ -36,7 +36,7 @@ export const GoogleCalendarConnectButton: React.FC<GoogleCalendarConnectButtonPr
             {connected ? (
               <>
                 <Calendar className="w-4 h-4 mr-2" />
-                ✅ Connecté
+                ✅ Connecté à Google Calendar
               </>
             ) : (
               <>
