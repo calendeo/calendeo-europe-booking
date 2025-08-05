@@ -14,21 +14,26 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
 
-    console.log('OAuth callback received:', { code: code ? 'present' : 'missing', state });
+    console.log('OAuth callback received:', { code: code ? 'present' : 'missing' });
 
+    // Check if code is present
     if (!code) {
       console.error('Missing authorization code');
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
+    // Get environment variables
     const client_id = Deno.env.get('GOOGLE_CLIENT_ID');
     const client_secret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-    const redirect_uri = Deno.env.get('GOOGLE_REDIRECT_URI') || 'https://calendeo.io/api/oauth/callback';
+    const redirect_uri = Deno.env.get('GOOGLE_REDIRECT_URI');
 
-    if (!client_id || !client_secret) {
-      console.error('Missing Google OAuth credentials');
+    if (!client_id || !client_secret || !redirect_uri) {
+      console.error('Missing Google OAuth credentials:', { 
+        client_id: !!client_id, 
+        client_secret: !!client_secret, 
+        redirect_uri: !!redirect_uri 
+      });
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
@@ -40,31 +45,31 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
+        code: code,
         client_id: client_id,
         client_secret: client_secret,
-        code: code,
-        grant_type: 'authorization_code',
         redirect_uri: redirect_uri,
+        grant_type: 'authorization_code',
       }),
     });
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error('Token exchange failed:', errorText);
+      console.error('Token exchange failed:', { status: tokenResponse.status, error: errorText });
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
     const tokenData = await tokenResponse.json();
     console.log('Token exchange successful');
 
-    const { access_token, refresh_token, expires_in } = tokenData;
+    const { access_token, refresh_token, expires_in, token_type } = tokenData;
 
     if (!access_token) {
       console.error('No access token received');
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
-    // Get user info
+    // Get user info using access_token
     console.log('Fetching user info...');
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
@@ -74,7 +79,7 @@ Deno.serve(async (req) => {
 
     if (!userInfoResponse.ok) {
       const errorText = await userInfoResponse.text();
-      console.error('Failed to fetch user info:', errorText);
+      console.error('Failed to fetch user info:', { status: userInfoResponse.status, error: errorText });
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
@@ -84,7 +89,7 @@ Deno.serve(async (req) => {
     const { email } = userInfo;
 
     if (!email) {
-      console.error('No email received from Google');
+      console.error('No email received from Google userinfo');
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
@@ -94,26 +99,23 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Calculate expires_at
-    const expires_at = new Date(Date.now() + (expires_in * 1000)).toISOString();
-
-    // Insert or update tokens in database
+    // Store tokens in database
     console.log('Storing tokens in database...');
-    const { data, error } = await supabase
+    const { error: tokenError } = await supabase
       .from('google_calendar_tokens')
       .upsert({
         email: email,
         access_token: access_token,
         refresh_token: refresh_token,
-        expires_at: expires_at,
+        expires_at: new Date(Date.now() + (expires_in * 1000)).toISOString(),
         provider: 'google',
         created_at: new Date().toISOString(),
       }, {
         onConflict: 'email',
       });
 
-    if (error) {
-      console.error('Database error:', error);
+    if (tokenError) {
+      console.error('Failed to store tokens:', tokenError);
       return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
     }
 
@@ -127,15 +129,18 @@ Deno.serve(async (req) => {
       .eq('email', email);
 
     if (userUpdateError) {
-      console.error('Error updating user status:', userUpdateError);
-      // Don't fail the flow for this error, just log it
+      console.error('Error updating user calendar_connected status:', userUpdateError);
+      // Don't fail the flow for this error, continue with success
+    } else {
+      console.log('User calendar_connected status updated successfully');
     }
 
     // Redirect to success page
+    console.log('Redirecting to success page');
     return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-success', 302);
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Unexpected error in OAuth callback:', error);
     return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
   }
 });
