@@ -72,7 +72,7 @@ interface EventDraft {
   show_remaining_spots?: boolean;
   rotation_ids?: string[];
   priorities?: { [userId: string]: number };
-  location?: 'zoom' | 'google_meet' | 'phone' | 'in_person';
+  location?: 'online' | 'physical' | 'custom';
   address?: string;
   description?: string;
   slug?: string;
@@ -132,7 +132,7 @@ const CreateEvent = () => {
       name: '',
       slug: '',
       host_ids: [] as string[],
-      location: 'zoom' as const,
+      location: 'online' as const,
       duration: 30,
       type: 'one-on-one',
       guest_form: {
@@ -449,7 +449,7 @@ const CreateEvent = () => {
         name: cleanEventDraft.name,
         duration: cleanEventDraft.duration,
         type: cleanEventDraft.mode || 'private',
-        location: cleanEventDraft.location || 'zoom',
+        location: cleanEventDraft.location || 'online',
         host_ids: cleanEventDraft.host_ids || [],
         color: cleanEventDraft.color || '#1a6be3',
         slug: cleanEventDraft.slug,
@@ -782,41 +782,34 @@ const CreateEvent = () => {
                   Lieu de l'événement *
                 </Label>
                 <RadioGroup 
-                  value={eventDraft.location || 'zoom'} 
-                  onValueChange={(value: 'zoom' | 'google_meet' | 'phone' | 'in_person') => 
+                  value={eventDraft.location || 'online'} 
+                  onValueChange={(value: 'online' | 'physical' | 'custom') => 
                     setEventDraft(prev => ({ ...prev, location: value }))}
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="zoom" id="zoom" />
-                    <Label htmlFor="zoom" className="flex items-center gap-2">
+                    <RadioGroupItem value="online" id="online" />
+                    <Label htmlFor="online" className="flex items-center gap-2">
                       <Video className="h-4 w-4" />
-                      Zoom
+                      Visioconférence (Zoom, Google Meet, Teams...)
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="google_meet" id="google_meet" />
-                    <Label htmlFor="google_meet" className="flex items-center gap-2">
-                      <Video className="h-4 w-4" />
-                      Google Meet
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="phone" id="phone" />
-                    <Label htmlFor="phone" className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      Téléphone
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="in_person" id="in_person" />
-                    <Label htmlFor="in_person" className="flex items-center gap-2">
+                    <RadioGroupItem value="physical" id="physical" />
+                    <Label htmlFor="physical" className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
                       En présentiel
                     </Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="custom" id="custom" />
+                    <Label htmlFor="custom" className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Autre (téléphone, lieu personnalisé...)
+                    </Label>
+                  </div>
                 </RadioGroup>
                 
-                {eventDraft.location === 'in_person' && (
+                {(eventDraft.location === 'physical' || eventDraft.location === 'custom') && (
                   <Input
                     placeholder="Adresse complète"
                     value={eventDraft.address || ''}
