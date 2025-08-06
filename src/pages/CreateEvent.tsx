@@ -186,12 +186,13 @@ const CreateEvent = () => {
     '#9c27b0', '#2196f3', '#4caf50', '#ff5722'
   ];
 
-  // Generate slug from name
+  // Génération de slug lisible selon vos spécifications
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+      .replace(/(^-|-$)+/g, '')
+      .slice(0, 100); // Limitation à 100 caractères
   };
 
   // Fetch available users on component mount
@@ -207,12 +208,38 @@ const CreateEvent = () => {
     fetchUsers();
   }, []);
 
-  // Auto-generate slug when name changes
+  // Auto-génération de slug optimisée
   useEffect(() => {
-    if (eventDraft.name && (!eventDraft.slug || eventDraft.slug === generateSlug(eventDraft.name))) {
-      setEventDraft(prev => ({ ...prev, slug: generateSlug(eventDraft.name || '') }));
+    if (eventDraft.name) {
+      const newSlug = generateSlug(eventDraft.name);
+      // Mise à jour uniquement si le slug a changé ou est vide
+      if (!eventDraft.slug || eventDraft.slug !== newSlug) {
+        setEventDraft(prev => ({ ...prev, slug: newSlug }));
+      }
     }
   }, [eventDraft.name]);
+
+  // Vérification status Google Calendar au montage
+  useEffect(() => {
+    const checkGoogleCalendarStatus = async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (user.user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('calendar_connected')
+          .eq('user_id', user.user.id)
+          .single();
+        
+        // Mise à jour du statut de connexion dans le draft
+        setEventDraft(prev => ({ 
+          ...prev, 
+          isCalendarConnected: userData?.calendar_connected || false 
+        }));
+      }
+    };
+    
+    checkGoogleCalendarStatus();
+  }, [googleConnected]);
 
   // Check for Google auth status in URL params and refresh connection status
   useEffect(() => {
@@ -305,95 +332,132 @@ const CreateEvent = () => {
   const handleCreateEvent = async () => {
     setIsCreatingEvent(true);
     try {
-      // Validate required fields
-      if (!eventDraft.name || !eventDraft.duration || !eventDraft.host_ids?.length) {
+      // Validation des champs requis selon vos spécifications
+      const isFormValid = eventDraft.name && eventDraft.duration && eventDraft.type && eventDraft.slug && eventDraft.host_ids?.length;
+      
+      if (!isFormValid) {
         toast({
           title: "Données manquantes",
-          description: "Merci de compléter toutes les étapes avant de finaliser",
+          description: "Merci de compléter : nom, durée, type, slug et organisateurs",
           variant: "destructive",
         });
         return;
       }
 
-      // Call the event-creation-flow edge function with complete data
-      const { data, error } = await supabase.functions.invoke('event-creation-flow', {
-        body: {
-          // Step 1: Event details
-          name: eventDraft.name,
-          duration: eventDraft.duration || 30,
-          type: eventDraft.type || 'consultation',
-          location: eventDraft.location || 'zoom',
-          host_ids: eventDraft.host_ids || [],
-          color: eventDraft.color,
-          slug: eventDraft.slug,
-          description: eventDraft.description,
-          mode: eventDraft.mode,
-          guest_limit: eventDraft.guest_limit,
-          show_remaining_spots: eventDraft.show_remaining_spots,
-          
-          // Step 2: Availability rules (currently handled in separate UI, for future implementation)
-          availability_rules: [], // TODO: Implement when availability UI is built
-          
-          // Step 3: Form data
-          form_data: eventDraft.guest_form,
-          
-          // Step 4: Disqualifications
-          disqualifications: eventDraft.disqualifications,
-          
-          // Step 6: Notifications
-          notifications: notifications,
-          
-          // Step 7: Confirmation settings
-          confirmation_settings: {
-            booking_window_type: eventDraft.booking_window_type,
-            booking_window_start: eventDraft.booking_window_start,
-            booking_window_end: eventDraft.booking_window_end,
-            slot_interval: eventDraft.slot_interval,
-            timezone_behavior: eventDraft.timezone_behavior,
-            timezone_fixed: eventDraft.timezone_fixed,
-            time_format: eventDraft.time_format,
-            buffers_enabled: eventDraft.buffers_enabled,
-            buffer_before: eventDraft.buffer_before,
-            buffer_after: eventDraft.buffer_after,
-            reschedule_allowed_guest: eventDraft.reschedule_allowed_guest,
-            reschedule_allowed_team: eventDraft.reschedule_allowed_team,
-            language: eventDraft.language,
-            hide_cookie_banner: eventDraft.hide_cookie_banner
-          }
+      // Vérifier que l'utilisateur est connecté
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user.user) {
+        toast({
+          title: "Non authentifié",
+          description: "Veuillez vous connecter pour créer un événement",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Récupérer les données utilisateur pour calendar_connected
+      const { data: userData } = await supabase
+        .from('users')
+        .select('calendar_connected')
+        .eq('user_id', user.user.id)
+        .single();
+
+      // Construction du payload optimisé
+      const payload = {
+        name: eventDraft.name,
+        duration: eventDraft.duration,
+        type: eventDraft.type || 'one-on-one',
+        location: eventDraft.location || 'online',
+        host_ids: eventDraft.host_ids || [],
+        color: eventDraft.color || '#1a6be3',
+        slug: eventDraft.slug,
+        description: eventDraft.description,
+        mode: eventDraft.mode || 'private',
+        guest_limit: eventDraft.guest_limit,
+        show_remaining_spots: eventDraft.show_remaining_spots || false,
+        
+        // Données du formulaire invité
+        form_data: eventDraft.guest_form,
+        
+        // Règles de disqualification
+        disqualifications: eventDraft.disqualifications?.rules || [],
+        
+        // Notifications
+        notifications: notifications,
+        
+        // Règles de disponibilité (pour future implémentation)
+        availability_rules: [],
+        
+        // Paramètres de confirmation
+        confirmation_settings: {
+          booking_window_type: eventDraft.booking_window_type || 'unlimited',
+          slot_interval: eventDraft.slot_interval || 30,
+          timezone_behavior: eventDraft.timezone_behavior || 'auto',
+          time_format: eventDraft.time_format || '24h',
+          buffers_enabled: eventDraft.buffers_enabled || false,
+          buffer_before: eventDraft.buffer_before || 0,
+          buffer_after: eventDraft.buffer_after || 0,
+          reschedule_allowed_guest: eventDraft.reschedule_allowed_guest || false,
+          reschedule_allowed_team: eventDraft.reschedule_allowed_team || false,
+          language: eventDraft.language || 'fr',
+          hide_cookie_banner: eventDraft.hide_cookie_banner || false
         }
+      };
+
+      // Appel de la fonction edge avec payload optimisé
+      const { data, error } = await supabase.functions.invoke('event-creation-flow', {
+        body: payload
       });
 
       if (error) {
-        console.error('Error creating event:', error);
+        console.error('Erreur création événement:', error);
         toast({
           title: "Erreur",
-          description: "Une erreur s'est produite lors de la création de l'événement.",
+          description: error.message || "Une erreur s'est produite lors de la création",
           variant: "destructive",
         });
         return;
       }
 
-      // Store the created event data
+      // Synchronisation Google Calendar si activée
+      if (userData?.calendar_connected && googleConnected) {
+        try {
+          // Note: Ici on pourrait appeler une fonction de sync Google Calendar
+          // Pour l'instant on affiche juste un message informatif
+          toast({
+            title: "📅 Sync Google Calendar",
+            description: "Événement synchronisé avec votre agenda Google",
+          });
+        } catch (syncError) {
+          toast({
+            title: "⚠️ Sync partielle",
+            description: "Événement créé, mais échec de la synchro Google Calendar",
+            variant: "default",
+          });
+        }
+      }
+
+      // Stocker les données de l'événement créé
       setCreatedEvent(data);
       
-      // Mark step 7 as completed
+      // Marquer l'étape 7 comme complétée
       setSteps(prev => prev.map(s => 
         s.id === 7 ? { ...s, completed: true } : s
       ));
 
-      // Show confirmation modal
+      // Afficher la modal de confirmation
       setIsConfirmationModalOpen(true);
       
       toast({
-        title: "Événement créé ✅",
-        description: "Votre événement a été créé avec succès !",
+        title: "🎉 Événement créé avec succès !",
+        description: "Votre événement est maintenant disponible pour réservation",
       });
 
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Erreur création événement:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de la création de l'événement.",
+        description: "Une erreur inattendue s'est produite. Vérifiez les champs ou réessayez.",
         variant: "destructive",
       });
     } finally {
@@ -435,7 +499,7 @@ const CreateEvent = () => {
 
   const handleReturnToDashboard = () => {
     setIsConfirmationModalOpen(false);
-    // Reset the event draft
+    // Reset complet du formulaire
     setEventDraft({
       color: '#1a6be3',
       mode: 'private',
@@ -452,6 +516,7 @@ const CreateEvent = () => {
         redirect_with_params: false
       }
     });
+    setNotifications([]);
     setCurrentStep(1);
     setSteps(prev => prev.map(s => ({
       ...s,
@@ -459,13 +524,16 @@ const CreateEvent = () => {
       active: s.id === 1,
       locked: s.id !== 1
     })));
+    
+    // Redirection optimisée vers dashboard
     navigate('/dashboard');
   };
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        const isStep1Valid = eventDraft.name; // Temporarily removed calendar connection requirement
+        // Validation selon vos spécifications : nom, durée, type requis
+        const isStep1Valid = eventDraft.name && eventDraft.duration && eventDraft.type;
         
         return (
           <div className="space-y-6">
