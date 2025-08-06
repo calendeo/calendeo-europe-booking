@@ -78,7 +78,7 @@ interface EventDraft {
   slug?: string;
   internal_note?: string;
   duration?: number;
-  type?: string;
+  type?: '1v1' | 'group' | 'round_robin';
   // Step 2 fields
   booking_window_type?: 'custom' | 'unlimited';
   booking_window_start?: string;
@@ -134,7 +134,7 @@ const CreateEvent = () => {
       host_ids: [] as string[],
       location: 'online' as const,
       duration: 30,
-      type: 'one-on-one',
+      type: '1v1' as const,
       guest_form: {
         include_last_name: false,
         include_email: false,
@@ -375,6 +375,7 @@ const CreateEvent = () => {
         name: eventDraft.name?.trim(),
         duration: eventDraft.duration,
         mode: eventDraft.mode,
+        type: eventDraft.type,
         slug: eventDraft.slug?.trim(),
         host_ids: Array.isArray(eventDraft.host_ids) ? eventDraft.host_ids : [],
         location: eventDraft.location,
@@ -392,6 +393,7 @@ const CreateEvent = () => {
         nameLength: cleanEventDraft.name?.length,
         duration: cleanEventDraft.duration,
         mode: cleanEventDraft.mode,
+        type: cleanEventDraft.type,
         slug: cleanEventDraft.slug,
         slugLength: cleanEventDraft.slug?.length,
         host_ids: cleanEventDraft.host_ids,
@@ -406,7 +408,7 @@ const CreateEvent = () => {
       if (!cleanEventDraft.slug || cleanEventDraft.slug.length === 0) missingFields.push('slug');
       if (!cleanEventDraft.host_ids || cleanEventDraft.host_ids.length === 0) missingFields.push('organisateurs');
       if (!cleanEventDraft.location) missingFields.push('lieu');
-      if (!cleanEventDraft.mode) missingFields.push('mode');
+      if (!cleanEventDraft.type) missingFields.push('type');
       
       const isFormValid = missingFields.length === 0;
       
@@ -448,8 +450,8 @@ const CreateEvent = () => {
       const payload = {
         name: cleanEventDraft.name,
         duration: cleanEventDraft.duration,
-        type: cleanEventDraft.mode || 'private',
-        location: cleanEventDraft.location || 'online',
+        type: cleanEventDraft.type || '1v1', // Enum Supabase: '1v1' | 'group' | 'round_robin'
+        location: cleanEventDraft.location || 'online', // Enum Supabase: 'online' | 'physical' | 'custom'
         host_ids: cleanEventDraft.host_ids || [],
         color: cleanEventDraft.color || '#1a6be3',
         slug: cleanEventDraft.slug,
@@ -485,6 +487,8 @@ const CreateEvent = () => {
           hide_cookie_banner: eventDraft.hide_cookie_banner || false
         }
       };
+
+      console.log("📦 Payload final envoyé à Supabase :", payload);
 
       // Appel de la fonction edge avec payload optimisé
       const { data, error } = await supabase.functions.invoke('event-creation-flow', {
