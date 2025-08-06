@@ -1,0 +1,6 @@
+# Force cache refresh for OAuth URLs
+/oauth/callback/* https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/google-oauth-callback 302!
+/api/oauth/callback/* https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/google-oauth-callback 302!
+
+# Redirect old calendeo.io domains if they somehow get called
+https://calendeo.io/api/oauth/callback https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/google-oauth-callback 302!

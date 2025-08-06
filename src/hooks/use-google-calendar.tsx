@@ -57,15 +57,13 @@ export const useGoogleCalendar = () => {
     checkConnection();
   }, [user]);
 
-  const getOAuthUrl = () => {
-    return 'https://accounts.google.com/o/oauth2/v2/auth?client_id=688791541113-ah93qkvrdufodi468earvmht2k54si2n.apps.googleusercontent.com&redirect_uri=https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/google-oauth-callback&response_type=code&scope=email%20https://www.googleapis.com/auth/calendar&access_type=offline&prompt=consent';
-  };
-
+  // ⚠️ DEPRECATED: URL OAuth directement intégrée dans les boutons pour éviter les problèmes de cache
+  // L'URL OAuth est maintenant hardcodée directement dans chaque bouton
+  
   return {
     isConnected,
     isLoading,
     tokenData,
-    checkConnection,
-    getOAuthUrl
+    checkConnection
   };
 };
