@@ -312,14 +312,28 @@ const CreateEvent = () => {
   const isStep1Valid = () => {
     if (currentStep !== 1) return true; // Only validate step 1
     
-    return !!(
+    const isValid = !!(
       eventDraft.name &&
       eventDraft.slug &&
       eventDraft.host_ids?.length &&
       eventDraft.location &&
+      eventDraft.mode &&
       eventDraft.slug.length > 2 &&
       /^[a-zA-Z0-9\-]+$/.test(eventDraft.slug)
     );
+    
+    // Debug logs pour diagnostiquer
+    console.log('🔍 Debug validation étape 1:', {
+      name: eventDraft.name,
+      slug: eventDraft.slug,
+      host_ids: eventDraft.host_ids,
+      location: eventDraft.location,
+      mode: eventDraft.mode,
+      isValid,
+      eventDraft
+    });
+    
+    return isValid;
   };
 
   const handleSaveStep = async (stepData: Partial<EventDraft>) => {
