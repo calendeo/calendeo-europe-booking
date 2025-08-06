@@ -128,6 +128,13 @@ const CreateEvent = () => {
   const [eventDraft, setEventDraft] = useState<EventDraft>({
     color: '#1a6be3',
     mode: 'private',
+    // Initialiser les champs essentiels pour éviter les erreurs
+    name: '',
+    slug: '',
+    host_ids: [],
+    location: 'zoom',
+    duration: 30,
+    type: 'one-on-one',
     guest_form: {
       include_last_name: false,
       include_email: false,
@@ -322,7 +329,7 @@ const CreateEvent = () => {
       /^[a-zA-Z0-9\-]+$/.test(eventDraft.slug)
     );
     
-    // Debug logs pour diagnostiquer
+    // Debug logs détaillés pour diagnostiquer
     console.log('🔍 Debug validation étape 1:', {
       name: eventDraft.name,
       slug: eventDraft.slug,
@@ -360,13 +367,38 @@ const CreateEvent = () => {
   const handleCreateEvent = async () => {
     setIsCreatingEvent(true);
     try {
+      // Debug complet de l'objet eventDraft avant validation
+      console.log('🚀 DEBUG - eventDraft complet avant création:', eventDraft);
+      console.log('🚀 DEBUG - Champs individuels:', {
+        name: eventDraft.name,
+        duration: eventDraft.duration,
+        mode: eventDraft.mode,
+        slug: eventDraft.slug,
+        host_ids: eventDraft.host_ids,
+        location: eventDraft.location
+      });
+      
       // Validation des champs requis selon vos spécifications
-      const isFormValid = eventDraft.name && eventDraft.duration && eventDraft.type && eventDraft.slug && eventDraft.host_ids?.length;
+      const missingFields = [];
+      if (!eventDraft.name) missingFields.push('nom');
+      if (!eventDraft.duration) missingFields.push('durée');
+      if (!eventDraft.slug) missingFields.push('slug');
+      if (!eventDraft.host_ids?.length) missingFields.push('organisateurs');
+      if (!eventDraft.location) missingFields.push('lieu');
+      if (!eventDraft.mode) missingFields.push('mode');
+      
+      const isFormValid = missingFields.length === 0;
+      
+      console.log('🔍 Validation finale:', {
+        isFormValid,
+        missingFields,
+        eventDraft
+      });
       
       if (!isFormValid) {
         toast({
           title: "Données manquantes",
-          description: "Merci de compléter : nom, durée, type, slug et organisateurs",
+          description: `Merci de compléter : ${missingFields.join(', ')}`,
           variant: "destructive",
         });
         return;
@@ -394,8 +426,8 @@ const CreateEvent = () => {
       const payload = {
         name: eventDraft.name,
         duration: eventDraft.duration,
-        type: eventDraft.type || 'one-on-one',
-        location: eventDraft.location || 'online',
+        type: eventDraft.mode || 'one-on-one', // Corriger pour utiliser mode au lieu de type
+        location: eventDraft.location || 'zoom',
         host_ids: eventDraft.host_ids || [],
         color: eventDraft.color || '#1a6be3',
         slug: eventDraft.slug,
