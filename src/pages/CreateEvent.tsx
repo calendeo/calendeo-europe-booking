@@ -464,7 +464,14 @@ const CreateEvent = () => {
         form_data: eventDraft.guest_form,
         
         // Règles de disqualification
-        disqualifications: eventDraft.disqualifications?.rules || [],
+        disqualifications: {
+          rules: eventDraft.disqualifications?.rules || [],
+          logic_type: eventDraft.disqualifications?.logic_type || 'OR',
+          message: eventDraft.disqualifications?.message || 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
+          redirect_enabled: eventDraft.disqualifications?.redirect_enabled || false,
+          redirect_url: eventDraft.disqualifications?.redirect_url,
+          redirect_with_params: eventDraft.disqualifications?.redirect_with_params || false
+        },
         
         // Notifications
         notifications: notifications,

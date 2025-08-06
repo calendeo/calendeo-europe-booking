@@ -106,9 +106,24 @@ serve(async (req) => {
     // Pour un template d'événement, on utilise une date temporaire par défaut
     const defaultDateTime = new Date().toISOString();
     
-    // Pour guest_id, on utilise un UUID temporaire car c'est un template d'événement
-    // Dans le vrai contexte, ce sera remplacé par l'ID du contact qui réserve
-    const defaultGuestId = crypto.randomUUID();
+    // Pour créer un template d'événement sans guest spécifique,
+    // on doit d'abord créer un contact temporaire pour satisfaire la contrainte FK
+    const { data: tempContact, error: contactError } = await supabase
+      .from('contacts')
+      .insert({
+        first_name: 'Template',
+        last_name: 'Guest',
+        email: `template-${Date.now()}@example.com`,
+        created_by: currentUserId,
+        status: 'opportunity'
+      })
+      .select()
+      .single();
+
+    if (contactError) {
+      console.error('Error creating temporary contact:', contactError);
+      throw new Error('Failed to create temporary contact for event template');
+    }
     
     console.log('📦 Creating event with payload:', {
       name: eventData.name,
@@ -117,7 +132,7 @@ serve(async (req) => {
       host_ids: eventData.host_ids,
       location: eventData.location || 'online',
       date_time: defaultDateTime,
-      guest_id: defaultGuestId,
+      guest_id: tempContact.id,
       form_id: formId,
       timezone: eventData.timezone || 'UTC'
     });
@@ -131,7 +146,7 @@ serve(async (req) => {
         host_ids: eventData.host_ids,
         location: eventData.location || 'online',
         date_time: defaultDateTime, // Champ obligatoire : date temporaire pour template
-        guest_id: defaultGuestId, // Champ obligatoire : guest temporaire pour template
+        guest_id: tempContact.id, // Champ obligatoire : contact temporaire pour template
         form_id: formId,
         timezone: eventData.timezone || 'UTC',
         status: 'confirmed',
@@ -168,6 +183,7 @@ serve(async (req) => {
     }
 
     // Step 4: Create disqualification rules if provided (Step 4 data)
+    console.log('🔍 Processing disqualifications:', eventData.disqualifications);
     if (eventData.disqualifications?.rules?.length > 0) {
       const disqualificationRules = eventData.disqualifications.rules.map((rule: any) => ({
         event_id: event.id,
@@ -181,6 +197,7 @@ serve(async (req) => {
         created_by: currentUserId
       }));
 
+      console.log('🔍 Creating disqualification rules:', disqualificationRules);
       const { error: disqualificationError } = await supabase
         .from('disqualifications')
         .insert(disqualificationRules);
