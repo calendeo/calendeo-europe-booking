@@ -103,14 +103,18 @@ serve(async (req) => {
     }
 
     // Step 2: Create the main event (Step 1 data)
+    // Pour un template d'événement, on utilise une date temporaire par défaut
+    const defaultDateTime = new Date().toISOString();
+    
     const { data: event, error: eventError } = await supabase
       .from('events')
       .insert({
         name: eventData.name,
-        type: eventData.type || 'consultation',
+        type: eventData.type || '1v1',
         duration: eventData.duration,
         host_ids: eventData.host_ids,
-        location: eventData.location || 'zoom',
+        location: eventData.location || 'online',
+        date_time: defaultDateTime, // Champ obligatoire : date temporaire pour template
         form_id: formId,
         timezone: eventData.timezone || 'UTC',
         status: 'confirmed',
