@@ -106,6 +106,22 @@ serve(async (req) => {
     // Pour un template d'événement, on utilise une date temporaire par défaut
     const defaultDateTime = new Date().toISOString();
     
+    // Pour guest_id, on utilise un UUID temporaire car c'est un template d'événement
+    // Dans le vrai contexte, ce sera remplacé par l'ID du contact qui réserve
+    const defaultGuestId = crypto.randomUUID();
+    
+    console.log('📦 Creating event with payload:', {
+      name: eventData.name,
+      type: eventData.type || '1v1',
+      duration: eventData.duration,
+      host_ids: eventData.host_ids,
+      location: eventData.location || 'online',
+      date_time: defaultDateTime,
+      guest_id: defaultGuestId,
+      form_id: formId,
+      timezone: eventData.timezone || 'UTC'
+    });
+    
     const { data: event, error: eventError } = await supabase
       .from('events')
       .insert({
@@ -115,6 +131,7 @@ serve(async (req) => {
         host_ids: eventData.host_ids,
         location: eventData.location || 'online',
         date_time: defaultDateTime, // Champ obligatoire : date temporaire pour template
+        guest_id: defaultGuestId, // Champ obligatoire : guest temporaire pour template
         form_id: formId,
         timezone: eventData.timezone || 'UTC',
         status: 'confirmed',
