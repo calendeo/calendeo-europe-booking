@@ -106,17 +106,38 @@ serve(async (req) => {
     // Pour un template d'événement, on utilise une date temporaire par défaut
     const defaultDateTime = new Date().toISOString();
     
+    // Validation et normalisation des valeurs
+    // Normaliser la location pour correspondre à l'enum event_location
+    let normalizedLocation: string = 'online'; // valeur par défaut
+    if (eventData.location) {
+      const locationMap: { [key: string]: string } = {
+        'online': 'online',
+        'physical': 'physical', 
+        'custom': 'custom',
+        'google_meet': 'online',
+        'zoom': 'online',
+        'teams': 'online'
+      };
+      normalizedLocation = locationMap[eventData.location.toLowerCase()] || 'online';
+    }
+    
     // Pour créer un template d'événement sans guest spécifique,
     // on doit d'abord créer un contact temporaire pour satisfaire la contrainte FK
+    const tempContactData = {
+      first_name: 'Template',
+      last_name: 'Guest',
+      email: `template-${Date.now()}@example.com`,
+      created_by: currentUserId,
+      status: 'opportunity' as const,
+      timezone: 'UTC',
+      // utm_data peut être null (nullable), donc on ne l'inclut pas
+    };
+    
+    console.log('🔄 Creating temporary contact with data:', tempContactData);
+    
     const { data: tempContact, error: contactError } = await supabase
       .from('contacts')
-      .insert({
-        first_name: 'Template',
-        last_name: 'Guest',
-        email: `template-${Date.now()}@example.com`,
-        created_by: currentUserId,
-        status: 'opportunity'
-      })
+      .insert(tempContactData)
       .select()
       .single();
 
@@ -125,40 +146,34 @@ serve(async (req) => {
       throw new Error('Failed to create temporary contact for event template');
     }
     
-    console.log('📦 Creating event with payload:', {
+    // Préparer le payload pour l'événement avec toutes les validations
+    const eventPayload = {
       name: eventData.name,
       type: eventData.type || '1v1',
       duration: eventData.duration,
       host_ids: eventData.host_ids,
-      location: eventData.location || 'online',
-      date_time: defaultDateTime,
-      guest_id: tempContact.id,
+      location: normalizedLocation, // Utiliser la location normalisée
+      date_time: defaultDateTime, // Champ obligatoire : date temporaire pour template
+      guest_id: tempContact.id, // Champ obligatoire : contact temporaire pour template
       form_id: formId,
-      timezone: eventData.timezone || 'UTC'
-    });
+      timezone: eventData.timezone || 'UTC',
+      status: 'confirmed',
+      created_by: currentUserId,
+      color: eventData.color || '#1a6be3',
+      slug: eventData.slug,
+      description: eventData.description || null, // Explicitement null si vide
+      mode: eventData.mode || 'private',
+      guest_limit: eventData.guest_limit || null, // Explicitement null si vide
+      show_remaining_spots: eventData.show_remaining_spots || false,
+      confirmation_settings: eventData.confirmation_settings ? 
+        (typeof eventData.confirmation_settings === 'object' ? eventData.confirmation_settings : null) : null
+    };
+    
+    console.log('📦 Final event payload being sent to Supabase:', eventPayload);
     
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .insert({
-        name: eventData.name,
-        type: eventData.type || '1v1',
-        duration: eventData.duration,
-        host_ids: eventData.host_ids,
-        location: eventData.location || 'online',
-        date_time: defaultDateTime, // Champ obligatoire : date temporaire pour template
-        guest_id: tempContact.id, // Champ obligatoire : contact temporaire pour template
-        form_id: formId,
-        timezone: eventData.timezone || 'UTC',
-        status: 'confirmed',
-        created_by: currentUserId,
-        color: eventData.color || '#1a6be3',
-        slug: eventData.slug,
-        description: eventData.description,
-        mode: eventData.mode || 'private',
-        guest_limit: eventData.guest_limit,
-        show_remaining_spots: eventData.show_remaining_spots || false,
-        confirmation_settings: eventData.confirmation_settings
-      })
+      .insert(eventPayload)
       .select()
       .single();
 

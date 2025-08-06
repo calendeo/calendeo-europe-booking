@@ -446,40 +446,63 @@ const CreateEvent = () => {
         .eq('user_id', user.user.id)
         .single();
 
-      // Construction du payload optimisé avec les données nettoyées
+      // Normaliser la location pour correspondre aux valeurs acceptées par Supabase
+      const normalizeLocation = (location: string): string => {
+        const locationMap: { [key: string]: string } = {
+          'online': 'online',
+          'physical': 'physical', 
+          'custom': 'custom',
+          'google_meet': 'online',
+          'zoom': 'online',
+          'teams': 'online',
+          'call': 'online',
+          'meeting': 'online',
+          'sur place': 'physical',
+          'en ligne': 'online',
+          'bureau': 'physical',
+          'personnalisé': 'custom'
+        };
+        return locationMap[location?.toLowerCase()] || 'online';
+      };
+
+      // Construction du payload optimisé avec toutes les validations
       const payload = {
         name: cleanEventDraft.name,
         duration: cleanEventDraft.duration,
         type: cleanEventDraft.type || '1v1', // Enum Supabase: '1v1' | 'group' | 'round_robin'
-        location: cleanEventDraft.location || 'online', // Enum Supabase: 'online' | 'physical' | 'custom'
+        location: normalizeLocation(cleanEventDraft.location), // Enum Supabase normalisé
         host_ids: cleanEventDraft.host_ids || [],
         color: cleanEventDraft.color || '#1a6be3',
         slug: cleanEventDraft.slug,
-        description: cleanEventDraft.description,
+        description: cleanEventDraft.description || null, // Explicitement null si vide
         mode: cleanEventDraft.mode || 'private',
-        guest_limit: eventDraft.guest_limit,
+        guest_limit: eventDraft.guest_limit || null, // Explicitement null si vide  
         show_remaining_spots: eventDraft.show_remaining_spots || false,
         
-        // Données du formulaire invité
-        form_data: eventDraft.guest_form,
+        // Données du formulaire invité - vérifier qu'il n'est pas vide
+        form_data: eventDraft.guest_form && Object.keys(eventDraft.guest_form).length > 0 ? eventDraft.guest_form : {
+          include_last_name: false,
+          include_email: false,
+          custom_questions: []
+        },
         
-        // Règles de disqualification
-        disqualifications: {
-          rules: eventDraft.disqualifications?.rules || [],
+        // Règles de disqualification - structure complète et valide
+        disqualifications: eventDraft.disqualifications?.rules?.length > 0 ? {
+          rules: eventDraft.disqualifications.rules,
           logic_type: eventDraft.disqualifications?.logic_type || 'OR',
           message: eventDraft.disqualifications?.message || 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
           redirect_enabled: eventDraft.disqualifications?.redirect_enabled || false,
-          redirect_url: eventDraft.disqualifications?.redirect_url,
+          redirect_url: eventDraft.disqualifications?.redirect_enabled ? eventDraft.disqualifications?.redirect_url : null,
           redirect_with_params: eventDraft.disqualifications?.redirect_with_params || false
-        },
+        } : { rules: [] },
         
-        // Notifications
-        notifications: notifications,
+        // Notifications - array vide si pas de notifications
+        notifications: Array.isArray(notifications) ? notifications : [],
         
         // Règles de disponibilité (pour future implémentation)
         availability_rules: [],
         
-        // Paramètres de confirmation
+        // Paramètres de confirmation - objet complet et valide
         confirmation_settings: {
           booking_window_type: eventDraft.booking_window_type || 'unlimited',
           slot_interval: eventDraft.slot_interval || 30,
