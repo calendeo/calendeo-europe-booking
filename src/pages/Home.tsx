@@ -38,30 +38,16 @@ const Home = () => {
     }
   }, [user]);
 
-  // Check for Google auth status in URL params
+  // Check for Google auth status in URL params and redirect to dashboard
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const authStatus = urlParams.get('auth');
     
-    if (authStatus === 'google-success') {
-      toast({
-        title: '🎉 Connexion Google réussie !',
-        description: 'Votre agenda Google est maintenant connecté et synchronisé.',
-      });
-      // Clean up URL after 3 seconds
-      setTimeout(() => {
-        window.history.replaceState(null, '', window.location.pathname);
-      }, 3000);
-    } else if (authStatus === 'google-error') {
-      toast({
-        title: 'Erreur de connexion Google',
-        description: 'Impossible de connecter votre agenda Google. Veuillez réessayer.',
-        variant: 'destructive',
-      });
-      // Clean up URL
-      window.history.replaceState(null, '', window.location.pathname);
+    if (authStatus === 'google-success' || authStatus === 'google-error') {
+      // Redirect to dashboard to handle auth status properly
+      window.location.replace(`/dashboard?auth=${authStatus}`);
     }
-  }, [toast]);
+  }, []);
 
   const fetchEvents = async () => {
     try {
