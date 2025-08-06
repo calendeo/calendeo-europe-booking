@@ -15,6 +15,8 @@ export const useGoogleCalendar = () => {
     }
 
     try {
+      console.log('🔍 Checking Google Calendar connection for user:', user.email);
+      
       // Check both google_calendar_tokens and user's calendar_connected status
       const [tokensResult, userResult] = await Promise.all([
         supabase
@@ -25,9 +27,12 @@ export const useGoogleCalendar = () => {
         supabase
           .from('users')
           .select('calendar_connected')
-          .eq('email', user.email)
+          .eq('user_id', user.id)
           .maybeSingle()
       ]);
+
+      console.log('📊 Tokens result:', tokensResult);
+      console.log('👤 User result:', userResult);
 
       if (tokensResult.error) {
         console.error('Error checking Google Calendar tokens:', tokensResult.error);
@@ -42,6 +47,12 @@ export const useGoogleCalendar = () => {
       
       // User is connected if they have tokens OR calendar_connected is true
       const connected = hasTokens || userConnected;
+      
+      console.log('✅ Google Calendar connection status:', {
+        hasTokens,
+        userConnected,
+        finalStatus: connected
+      });
       
       setIsConnected(connected);
       setTokenData(tokensResult.data);
