@@ -45,17 +45,17 @@ const Home = () => {
     
     if (authStatus === 'google-success') {
       toast({
-        title: '🎉 Votre compte Google a bien été connecté !',
-        description: 'Synchronisation activée avec succès.',
+        title: '🎉 Connexion Google réussie !',
+        description: 'Votre agenda Google est maintenant connecté et synchronisé.',
       });
-      // Clean up URL after 5 seconds
+      // Clean up URL after 3 seconds
       setTimeout(() => {
         window.history.replaceState(null, '', window.location.pathname);
-      }, 5000);
+      }, 3000);
     } else if (authStatus === 'google-error') {
       toast({
-        title: 'Erreur de connexion',
-        description: 'Une erreur est survenue lors de la connexion à Google Calendar.',
+        title: 'Erreur de connexion Google',
+        description: 'Impossible de connecter votre agenda Google. Veuillez réessayer.',
         variant: 'destructive',
       });
       // Clean up URL

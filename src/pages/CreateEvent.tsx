@@ -221,8 +221,8 @@ const CreateEvent = () => {
     
     if (authStatus === 'google-success') {
       toast({
-        title: '🎉 Votre compte Google a bien été connecté !',
-        description: 'Vous pouvez maintenant continuer la création de votre événement.',
+        title: '🎉 Connexion Google réussie !',
+        description: 'Votre agenda Google est connecté. Vous pouvez continuer la création.',
       });
       // Clean up URL and reload to refresh connection status
       setTimeout(() => {
@@ -231,8 +231,8 @@ const CreateEvent = () => {
       }, 2000);
     } else if (authStatus === 'google-error') {
       toast({
-        title: 'Erreur de connexion',
-        description: 'Une erreur est survenue lors de la connexion à Google Calendar.',
+        title: 'Erreur de connexion Google',
+        description: 'Impossible de connecter votre agenda Google. Veuillez réessayer.',
         variant: 'destructive',
       });
       // Clean up URL

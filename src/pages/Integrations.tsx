@@ -94,39 +94,9 @@ const Integrations = () => {
     return connectedIntegrations.some((integration) => integration.provider === provider);
   };
 
-  const handleGoogleConnect = async () => {
-    setActionLoading('google');
-    
-    try {
-      // In a real implementation, you would redirect to Google OAuth
-      // For now, we'll simulate a successful connection
-      const { error } = await supabase
-        .from('user_integrations')
-        .insert({
-          user_id: user?.id,
-          provider: 'google',
-          access_token: 'mock_access_token',
-          refresh_token: 'mock_refresh_token',
-          expires_at: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-        });
-
-      if (error) throw error;
-
-      await fetchConnectedIntegrations();
-      toast({
-        title: 'Succès',
-        description: 'Google Calendar connecté avec succès.',
-      });
-    } catch (error) {
-      console.error('Error connecting Google Calendar:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de connecter Google Calendar.',
-        variant: 'destructive',
-      });
-    } finally {
-      setActionLoading(null);
-    }
+  const handleGoogleConnect = () => {
+    // Redirect to Google OAuth
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=688791541113-ah93qkvrdufodi468earvmht2k54si2n.apps.googleusercontent.com&redirect_uri=https://qbrgdxzbluzpsgsrhtst.supabase.co/functions/v1/google-oauth-callback&response_type=code&scope=email%20https://www.googleapis.com/auth/calendar&access_type=offline&prompt=consent';
   };
 
   const handleDisconnect = async (provider: string) => {
@@ -167,7 +137,7 @@ const Integrations = () => {
       await handleDisconnect(integration.provider);
     } else {
       if (integration.provider === 'google') {
-        await handleGoogleConnect();
+        handleGoogleConnect();
       }
     }
   };
