@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     // Check if code is present
     if (!code) {
       console.error('Missing authorization code');
-      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+      return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
     }
 
     // Get environment variables  
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
         client_secret: !!client_secret, 
         redirect_uri: !!redirect_uri 
       });
-      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+      return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
     }
 
     // Exchange code for tokens
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('Token exchange failed:', { status: tokenResponse.status, error: errorText });
-      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+      return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
     }
 
     const tokenData = await tokenResponse.json();
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
 
     if (!access_token) {
       console.error('No access token received');
-      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+      return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
     }
 
     // Get user info using access_token
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     if (!userInfoResponse.ok) {
       const errorText = await userInfoResponse.text();
       console.error('Failed to fetch user info:', { status: userInfoResponse.status, error: errorText });
-      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+      return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
     }
 
     const userInfo = await userInfoResponse.json();
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 
     if (!email) {
       console.error('No email received from Google userinfo');
-      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+      return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
     }
 
     // Initialize Supabase client
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
 
     if (tokenError) {
       console.error('Failed to store tokens:', tokenError);
-      return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+      return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
     }
 
     console.log('Tokens stored successfully');
@@ -137,10 +137,10 @@ Deno.serve(async (req) => {
 
     // Redirect to success page
     console.log('Redirecting to success page');
-    return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-success', 302);
+    return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-success', 302);
 
   } catch (error) {
     console.error('Unexpected error in Google OAuth callback:', error);
-    return Response.redirect('https://calendeo.lovable.app/dashboard?auth=google-error', 302);
+    return Response.redirect('https://qbrgdxzbluzpsgsrhtst.lovable.app/dashboard?auth=google-error', 302);
   }
 });
