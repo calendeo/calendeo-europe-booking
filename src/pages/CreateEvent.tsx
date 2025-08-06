@@ -308,6 +308,20 @@ const CreateEvent = () => {
     }
   };
 
+  // Validation logic for step 1 - event details
+  const isStep1Valid = () => {
+    if (currentStep !== 1) return true; // Only validate step 1
+    
+    return !!(
+      eventDraft.name &&
+      eventDraft.slug &&
+      eventDraft.host_ids?.length &&
+      eventDraft.location &&
+      eventDraft.slug.length > 2 &&
+      /^[a-zA-Z0-9\-]+$/.test(eventDraft.slug)
+    );
+  };
+
   const handleSaveStep = async (stepData: Partial<EventDraft>) => {
     setEventDraft(prev => ({ ...prev, ...stepData }));
     
@@ -532,8 +546,8 @@ const CreateEvent = () => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        // Validation selon vos spécifications : nom, durée, type requis
-        const isStep1Valid = eventDraft.name && eventDraft.duration && eventDraft.type;
+        // Use the validation function defined above
+        const isCurrentStepValid = isStep1Valid();
         
         return (
           <div className="space-y-6">
@@ -795,7 +809,7 @@ const CreateEvent = () => {
             <div className="flex justify-end">
               <Button 
                 onClick={() => {
-                  if (isStep1Valid) {
+                  if (isCurrentStepValid) {
                     handleSaveStep(eventDraft);
                     setCurrentStep(2);
                     setSteps(prev => prev.map(s => ({
@@ -806,7 +820,7 @@ const CreateEvent = () => {
                     })));
                   }
                 }}
-                disabled={!isStep1Valid}
+                disabled={!isCurrentStepValid}
                 className="px-8"
               >
                 Enregistrer et continuer
