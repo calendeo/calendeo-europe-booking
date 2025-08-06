@@ -125,28 +125,31 @@ const CreateEvent = () => {
   const navigate = useNavigate();
   const { isConnected: googleConnected, isLoading: googleLoading } = useGoogleCalendar();
   const [currentStep, setCurrentStep] = useState(1);
-  const [eventDraft, setEventDraft] = useState<EventDraft>({
-    color: '#1a6be3',
-    mode: 'private',
-    // Initialiser les champs essentiels pour éviter les erreurs
-    name: '',
-    slug: '',
-    host_ids: [],
-    location: 'zoom',
-    duration: 30,
-    type: 'one-on-one',
-    guest_form: {
-      include_last_name: false,
-      include_email: false,
-      custom_questions: []
-    },
-    disqualifications: {
-      rules: [],
-      logic_type: 'OR',
-      message: 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
-      redirect_enabled: false,
-      redirect_with_params: false
-    }
+  const [eventDraft, setEventDraft] = useState<EventDraft>(() => {
+    const initialDraft = {
+      color: '#1a6be3',
+      mode: 'private' as const,
+      name: '',
+      slug: '',
+      host_ids: [] as string[],
+      location: 'zoom' as const,
+      duration: 30,
+      type: 'one-on-one',
+      guest_form: {
+        include_last_name: false,
+        include_email: false,
+        custom_questions: []
+      },
+      disqualifications: {
+        rules: [],
+        logic_type: 'OR' as const,
+        message: 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
+        redirect_enabled: false,
+        redirect_with_params: false
+      }
+    };
+    console.log('🔧 EventDraft initial:', initialDraft);
+    return initialDraft;
   });
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
@@ -367,32 +370,50 @@ const CreateEvent = () => {
   const handleCreateEvent = async () => {
     setIsCreatingEvent(true);
     try {
-      // Debug complet de l'objet eventDraft avant validation
-      console.log('🚀 DEBUG - eventDraft complet avant création:', eventDraft);
-      console.log('🚀 DEBUG - Champs individuels:', {
-        name: eventDraft.name,
+      // Créer un objet propre sans références circulaires
+      const cleanEventDraft = {
+        name: eventDraft.name?.trim(),
         duration: eventDraft.duration,
         mode: eventDraft.mode,
-        slug: eventDraft.slug,
-        host_ids: eventDraft.host_ids,
-        location: eventDraft.location
+        slug: eventDraft.slug?.trim(),
+        host_ids: Array.isArray(eventDraft.host_ids) ? eventDraft.host_ids : [],
+        location: eventDraft.location,
+        color: eventDraft.color,
+        description: eventDraft.description,
+        guest_form: eventDraft.guest_form,
+        disqualifications: eventDraft.disqualifications
+      };
+
+      // Debug complet de l'objet eventDraft avant validation
+      console.log('🚀 DEBUG - eventDraft original:', eventDraft);
+      console.log('🚀 DEBUG - eventDraft nettoyé:', cleanEventDraft);
+      console.log('🚀 DEBUG - Champs individuels:', {
+        name: cleanEventDraft.name,
+        nameLength: cleanEventDraft.name?.length,
+        duration: cleanEventDraft.duration,
+        mode: cleanEventDraft.mode,
+        slug: cleanEventDraft.slug,
+        slugLength: cleanEventDraft.slug?.length,
+        host_ids: cleanEventDraft.host_ids,
+        hostIdsLength: cleanEventDraft.host_ids?.length,
+        location: cleanEventDraft.location
       });
       
       // Validation des champs requis selon vos spécifications
       const missingFields = [];
-      if (!eventDraft.name) missingFields.push('nom');
-      if (!eventDraft.duration) missingFields.push('durée');
-      if (!eventDraft.slug) missingFields.push('slug');
-      if (!eventDraft.host_ids?.length) missingFields.push('organisateurs');
-      if (!eventDraft.location) missingFields.push('lieu');
-      if (!eventDraft.mode) missingFields.push('mode');
+      if (!cleanEventDraft.name || cleanEventDraft.name.length === 0) missingFields.push('nom');
+      if (!cleanEventDraft.duration || cleanEventDraft.duration <= 0) missingFields.push('durée');
+      if (!cleanEventDraft.slug || cleanEventDraft.slug.length === 0) missingFields.push('slug');
+      if (!cleanEventDraft.host_ids || cleanEventDraft.host_ids.length === 0) missingFields.push('organisateurs');
+      if (!cleanEventDraft.location) missingFields.push('lieu');
+      if (!cleanEventDraft.mode) missingFields.push('mode');
       
       const isFormValid = missingFields.length === 0;
       
       console.log('🔍 Validation finale:', {
         isFormValid,
         missingFields,
-        eventDraft
+        cleanEventDraft
       });
       
       if (!isFormValid) {
@@ -401,6 +422,7 @@ const CreateEvent = () => {
           description: `Merci de compléter : ${missingFields.join(', ')}`,
           variant: "destructive",
         });
+        setIsCreatingEvent(false);
         return;
       }
 
@@ -422,17 +444,17 @@ const CreateEvent = () => {
         .eq('user_id', user.user.id)
         .single();
 
-      // Construction du payload optimisé
+      // Construction du payload optimisé avec les données nettoyées
       const payload = {
-        name: eventDraft.name,
-        duration: eventDraft.duration,
-        type: eventDraft.mode || 'one-on-one', // Corriger pour utiliser mode au lieu de type
-        location: eventDraft.location || 'zoom',
-        host_ids: eventDraft.host_ids || [],
-        color: eventDraft.color || '#1a6be3',
-        slug: eventDraft.slug,
-        description: eventDraft.description,
-        mode: eventDraft.mode || 'private',
+        name: cleanEventDraft.name,
+        duration: cleanEventDraft.duration,
+        type: cleanEventDraft.mode || 'private',
+        location: cleanEventDraft.location || 'zoom',
+        host_ids: cleanEventDraft.host_ids || [],
+        color: cleanEventDraft.color || '#1a6be3',
+        slug: cleanEventDraft.slug,
+        description: cleanEventDraft.description,
+        mode: cleanEventDraft.mode || 'private',
         guest_limit: eventDraft.guest_limit,
         show_remaining_spots: eventDraft.show_remaining_spots || false,
         
