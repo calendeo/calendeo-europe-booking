@@ -18,17 +18,9 @@ interface EventCreationRequest {
   mode?: string;
   guest_limit?: number;
   show_remaining_spots?: boolean;
-  form_data?: any;
   timezone?: string;
-  availability_rules?: any[];
-  notifications?: any[];
-  disqualifications?: any;
-  confirmation_settings?: any;
-  utm_data?: any;
   date_time?: string;
 }
-
-// SUPPRESSION COMPLÈTE de la fonction safeJsonData qui peut causer des erreurs JSON
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -74,8 +66,6 @@ serve(async (req) => {
       eventName: eventData.name,
       eventType: eventData.type,
       hostCount: eventData.host_ids?.length || 0,
-      hasFormData: !!eventData.form_data?.custom_questions?.length,
-      hasUtmData: !!eventData.utm_data,
       timezone: eventData.timezone || 'UTC'
     });
 
@@ -92,43 +82,7 @@ serve(async (req) => {
       throw new Error('host_ids must be a non-empty array');
     }
 
-    // SUPPRESSION COMPLÈTE de la gestion utm_data pour éliminer toute source d'erreur JSON
-    console.log('🔧 Skipping utm_data validation - removed to prevent JSON errors');
-
-    // Step 1: Create form if needed (Step 3 data)
-    let formId = null;
-    if (eventData.form_data?.custom_questions?.length > 0) {
-      console.log('📝 Creating form with questions:', eventData.form_data.custom_questions);
-      
-      const { data: form, error: formError } = await supabase
-        .from('forms')
-        .insert({
-          name: `Formulaire - ${eventData.name}`,
-          created_by: currentUserId
-        })
-        .select()
-        .single();
-
-      if (formError) throw formError;
-      formId = form.id;
-
-      // Create form questions
-      const questions = eventData.form_data.custom_questions.map((q: any) => ({
-        form_id: formId,
-        label: q.label,
-        type: q.type,
-        required: q.required || false
-      }));
-
-      const { error: questionsError } = await supabase
-        .from('form_questions')
-        .insert(questions);
-
-      if (questionsError) throw questionsError;
-      console.log('✅ Form and questions created successfully');
-    }
-
-    // Step 2: Normalize and validate location enum
+    // Normalize location enum
     let normalizedLocation: string = 'online'; // default safe value
     if (eventData.location) {
       const locationMap: { [key: string]: string } = {
@@ -145,23 +99,16 @@ serve(async (req) => {
     }
     console.log('🗺️ Location normalized:', eventData.location, '->', normalizedLocation);
 
-    // Step 3: Generate proper date_time
+    // Generate proper date_time
     let eventDateTime: string;
     if (eventData.date_time) {
-      // Use provided date_time if valid
       eventDateTime = new Date(eventData.date_time).toISOString();
     } else {
-      // Use default template date (required for database)
       eventDateTime = new Date().toISOString();
     }
     console.log('📅 Event date_time set to:', eventDateTime);
 
-    // Step 4: Create temporary contact - VERSION ULTRA MINIMALE POUR DEBUG
-    console.log('🔍 BEFORE CONTACT CREATION - Debugging all variables:');
-    console.log('- currentUserId:', currentUserId, 'type:', typeof currentUserId);
-    console.log('- eventData.timezone:', eventData.timezone, 'type:', typeof eventData.timezone);
-    
-    // Contact le plus basique possible - AUCUN champ nullable ou complexe
+    // Create temporary contact - VERSION ULTRA MINIMALE
     const tempContactData = {
       first_name: 'Template',
       last_name: 'Guest', 
@@ -171,8 +118,7 @@ serve(async (req) => {
       timezone: 'UTC'
     };
 
-    console.log('📦 ULTRA MINIMAL Contact payload:', JSON.stringify(tempContactData, null, 2));
-    console.log('🔍 About to insert contact with these exact values...');
+    console.log('📦 ULTRA MINIMAL Contact payload:', tempContactData);
 
     const { data: tempContact, error: contactError } = await supabase
       .from('contacts')
@@ -193,7 +139,7 @@ serve(async (req) => {
 
     console.log('✅ Temporary contact created successfully:', tempContact.id);
 
-    // Step 5: Build clean event payload
+    // Build clean event payload - VERSION ULTRA SIMPLIFIÉE
     const eventPayload = {
       name: eventData.name,
       type: eventData.type,
@@ -202,7 +148,6 @@ serve(async (req) => {
       location: normalizedLocation,
       date_time: eventDateTime,
       guest_id: tempContact.id,
-      form_id: formId,
       timezone: eventData.timezone || 'UTC',
       status: 'confirmed',
       created_by: currentUserId,
@@ -211,11 +156,10 @@ serve(async (req) => {
       description: eventData.description || null,
       mode: eventData.mode || 'private',
       guest_limit: eventData.guest_limit || null,
-      show_remaining_spots: eventData.show_remaining_spots || false,
-      confirmation_settings: null // SUPPRESSION pour éliminer toute validation JSON problématique
+      show_remaining_spots: eventData.show_remaining_spots || false
     };
     
-    console.log('📦 Final event payload being sent to Supabase:', eventPayload);
+    console.log('📦 SIMPLIFIED event payload:', eventPayload);
     
     const { data: event, error: eventError } = await supabase
       .from('events')
@@ -223,79 +167,18 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (eventError) throw eventError;
-
-    // Step 3: Create availability rules if provided (Step 2 data)
-    if (eventData.availability_rules?.length > 0) {
-      const availabilityRules = eventData.availability_rules.map((rule: any) => ({
-        event_id: event.id,
-        weekday: rule.weekday,
-        start_time: rule.start_time,
-        end_time: rule.end_time,
-        timezone: rule.timezone || eventData.timezone || 'UTC',
-        created_by: currentUserId
-      }));
-
-      const { error: availabilityError } = await supabase
-        .from('event_availability_rules')
-        .insert(availabilityRules);
-
-      if (availabilityError) throw availabilityError;
+    if (eventError) {
+      console.error('❌ Event creation failed:', eventError);
+      throw eventError;
     }
 
-    // Step 4: Create disqualification rules if provided (Step 4 data)
-    console.log('🔍 Processing disqualifications:', eventData.disqualifications);
-    if (eventData.disqualifications?.rules?.length > 0) {
-      const disqualificationRules = eventData.disqualifications.rules.map((rule: any) => ({
-        event_id: event.id,
-        question_id: rule.question_id,
-        operator: rule.operator,
-        expected_value: rule.expected_value,
-        logic_type: eventData.disqualifications.logic_type || 'OR',
-        disqualification_message: eventData.disqualifications.message || 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
-        redirect_url: eventData.disqualifications.redirect_enabled ? eventData.disqualifications.redirect_url : null,
-        redirect_with_params: eventData.disqualifications.redirect_with_params || false,
-        created_by: currentUserId
-      }));
-
-      console.log('🔍 Creating disqualification rules:', disqualificationRules);
-      const { error: disqualificationError } = await supabase
-        .from('disqualifications')
-        .insert(disqualificationRules);
-
-      if (disqualificationError) throw disqualificationError;
-    }
-
-    // Step 5: Create notifications if provided (Step 6 data)
-    if (eventData.notifications?.length > 0) {
-      const eventNotifications = eventData.notifications.map((notif: any) => ({
-        event_id: event.id,
-        recipient_type: notif.recipient_type,
-        offset_type: notif.offset_type,
-        offset_value: notif.offset_value,
-        offset_unit: notif.offset_unit,
-        subject: notif.subject,
-        message: notif.message,
-        is_active: notif.is_active !== false,
-        created_by: currentUserId
-      }));
-
-      const { error: notificationsError } = await supabase
-        .from('event_notifications')
-        .insert(eventNotifications);
-
-      if (notificationsError) throw notificationsError;
-    }
-
-    console.log('Event creation flow completed successfully:', event.id);
+    console.log('✅ Event creation completed successfully:', event.id);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         event_id: event.id,
-        event: event,
-        form_id: formId,
-        slug: eventData.slug
+        event: event
       }),
       {
         status: 200,
