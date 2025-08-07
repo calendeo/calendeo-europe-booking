@@ -149,20 +149,12 @@ serve(async (req) => {
       created_by: currentUserId,
       status: 'opportunity' as const,
       timezone: eventData.timezone || 'UTC',
-      metadata: null, // Explicitly set to null instead of undefined
-      tags: null,
-      notes: null,
       phone: null,
-      company: null,
-      position: null,
-      website: null,
-      address: null,
-      social_links: null,
-      lead_source: null,
-      lead_score: null,
-      last_interaction: null,
-      custom_fields: null
+      assigned_to: null,
+      utm_data: null
     };
+    
+    console.log('🧾 Contact envoyé à Supabase :', tempContactData);
     
     console.log('🔄 Creating temporary contact:', tempContactData);
     
