@@ -153,8 +153,8 @@ serve(async (req) => {
       status: 'opportunity' as const,
       timezone: eventData.timezone || 'UTC',
       phone: null,
-      assigned_to: null,
-      utm_data: safeUtmData
+      assigned_to: null
+      // utm_data: safeUtmData  // TEMPORARILY DISABLED TO TEST
     };
     
     console.log('📦 Payload final envoyé à Supabase (contact):', tempContactData);
