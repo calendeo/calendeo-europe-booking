@@ -45,9 +45,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
       if (error) throw error;
 
-      console.log("🎯 Event créé :", data);
-      onEventCreated(data);
-      onOpenChange(false); // Fermer la modale
+      console.log("✅ Événement créé :", data);
+      onEventCreated(data); // 👉 déclenche le refetch dans Dashboard
+      onOpenChange(false); // ferme la modale
       setFormData({ name: '', duration: '30', type: 'consultation', location: 'online' });
     } catch (error) {
       console.error('Error creating event:', error);

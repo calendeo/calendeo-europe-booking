@@ -81,12 +81,30 @@ const Dashboard = () => {
   const fetchEvents = async () => {
     try {
       setEventsLoading(true);
+      
+      // Get current user's internal ID
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (userError) {
+        console.error("❌ Erreur récupération utilisateur:", userError);
+        throw userError;
+      }
+
+      console.log("👤 ID utilisateur interne:", userData.id);
+
       const { data, error } = await supabase
         .from('events')
         .select('*')
+        .or(`created_by.eq.${userData.id},host_ids.cs.{${userData.id}}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      console.log("📥 Événements récupérés:", data);
       setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
