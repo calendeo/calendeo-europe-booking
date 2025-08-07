@@ -24,7 +24,25 @@ interface EventCreationRequest {
   notifications?: any[];
   disqualifications?: any;
   confirmation_settings?: any;
+  utm_data?: any;
+  date_time?: string;
 }
+
+// Utility function to safely handle JSON data
+const safeJsonData = (data: any): any => {
+  if (!data) return null;
+  if (typeof data !== 'object') return null;
+  if (Array.isArray(data)) return data;
+  
+  try {
+    // Ensure it's a valid object that can be serialized
+    JSON.stringify(data);
+    return data;
+  } catch (error) {
+    console.warn('⚠️ Invalid JSON data detected, returning null');
+    return null;
+  }
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -65,19 +83,35 @@ serve(async (req) => {
 
     const currentUserId = userData.id;
     const eventData: EventCreationRequest = await req.json();
-    console.log('Starting event creation flow for:', eventData);
-
-    // Enhanced validation with proper error messages
-    console.log('🔍 Starting validation for event data:', {
-      name: eventData.name,
-      duration: eventData.duration,
-      host_ids: eventData.host_ids,
-      location: eventData.location,
-      type: eventData.type
+    
+    console.log('🚀 Event creation started:', {
+      eventName: eventData.name,
+      eventType: eventData.type,
+      hostCount: eventData.host_ids?.length || 0,
+      hasFormData: !!eventData.form_data?.custom_questions?.length,
+      hasUtmData: !!eventData.utm_data,
+      timezone: eventData.timezone || 'UTC'
     });
 
-    if (!eventData.name || !eventData.duration || !eventData.host_ids?.length || !eventData.type) {
-      throw new Error('Missing required fields: name, duration, type, or host_ids');
+    // Enhanced input validation
+    const requiredFields = ['name', 'duration', 'host_ids', 'type'];
+    const missingFields = requiredFields.filter(field => !eventData[field]);
+
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+
+    // Validate host_ids is array with content
+    if (!Array.isArray(eventData.host_ids) || eventData.host_ids.length === 0) {
+      throw new Error('host_ids must be a non-empty array');
+    }
+
+    // Sanitize utm_data if provided
+    if (eventData.utm_data) {
+      if (typeof eventData.utm_data !== 'object' || Array.isArray(eventData.utm_data)) {
+        console.warn('⚠️ Invalid utm_data format, setting to null');
+        eventData.utm_data = null;
+      }
     }
 
     // Step 1: Create form if needed (Step 3 data)
@@ -142,9 +176,6 @@ serve(async (req) => {
     console.log('📅 Event date_time set to:', eventDateTime);
 
     // Step 4: Create temporary contact for guest_id requirement
-    // Force clean JSON object transformation to avoid interpolation issues
-    const safeUtmData = JSON.parse(JSON.stringify(eventData.utm_data || {}));
-    
     const tempContactData = {
       first_name: 'Template',
       last_name: 'Guest',
@@ -153,15 +184,15 @@ serve(async (req) => {
       status: 'opportunity' as const,
       timezone: eventData.timezone || 'UTC',
       phone: null,
-      assigned_to: null
-      // utm_data: safeUtmData  // TEMPORARILY DISABLED TO TEST
+      assigned_to: null,
+      // SOLUTION : Passer l'objet JS natif directement (Supabase gère la sérialisation automatiquement)
+      utm_data: safeJsonData(eventData.utm_data)
     };
-    
-    console.log('📦 Payload final envoyé à Supabase (contact):', tempContactData);
-    console.log('🧪 utm_data à insérer :', JSON.stringify(tempContactData.utm_data, null, 2));
-    
-    console.log('🔄 Creating temporary contact:', tempContactData);
-    
+
+    console.log('📦 Contact payload:', tempContactData);
+    console.log('🔍 utm_data type:', typeof tempContactData.utm_data);
+    console.log('🔍 utm_data content:', tempContactData.utm_data);
+
     const { data: tempContact, error: contactError } = await supabase
       .from('contacts')
       .insert(tempContactData)
@@ -169,11 +200,11 @@ serve(async (req) => {
       .single();
 
     if (contactError) {
-      console.error('❌ Error creating temporary contact:', contactError);
-      throw new Error(`Failed to create temporary contact: ${contactError.message}`);
+      console.error('❌ Contact creation failed:', contactError);
+      throw new Error(`Contact creation failed: ${contactError.message}`);
     }
-    
-    console.log('✅ Temporary contact created:', tempContact.id);
+
+    console.log('✅ Temporary contact created successfully:', tempContact.id);
 
     // Step 5: Build clean event payload
     const eventPayload = {
@@ -288,9 +319,18 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error("Error in event creation flow:", error);
+    console.error("❌ Event creation flow failed:", {
+      error: error.message,
+      stack: error.stack,
+      eventData: eventData?.name || 'Unknown event'
+    });
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: "Event creation failed. Please check logs for details.",
+        timestamp: new Date().toISOString()
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
