@@ -109,12 +109,14 @@ const Home = () => {
     console.log("🎯 Event créé dans Home:", event);
     setCreatedEvent(event);
     setShowConfirmationModal(true);
+    // Rafraîchir immédiatement la liste des événements
+    fetchEvents();
   };
 
   const handleReturnToDashboard = () => {
     setShowConfirmationModal(false);
     setCreatedEvent(null);
-    fetchEvents(); // Recharger la liste des événements
+    fetchEvents();
   };
 
   if (loading) {
