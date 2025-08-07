@@ -175,7 +175,7 @@ serve(async (req) => {
     }
     console.log('📅 Event date_time set to:', eventDateTime);
 
-    // Step 4: Create temporary contact for guest_id requirement
+    // Step 4: Create temporary contact for guest_id requirement - VERSION ULTRA SAFE
     const tempContactData = {
       first_name: 'Template',
       last_name: 'Guest',
@@ -184,14 +184,16 @@ serve(async (req) => {
       status: 'opportunity' as const,
       timezone: eventData.timezone || 'UTC',
       phone: null,
-      assigned_to: null,
-      // SOLUTION : Passer l'objet JS natif directement (Supabase gère la sérialisation automatiquement)
-      utm_data: safeJsonData(eventData.utm_data)
+      assigned_to: null
+      // utm_data: COMPLÈTEMENT SUPPRIMÉ pour isoler le problème
     };
 
-    console.log('📦 Contact payload:', tempContactData);
-    console.log('🔍 utm_data type:', typeof tempContactData.utm_data);
-    console.log('🔍 utm_data content:', tempContactData.utm_data);
+    console.log('🔍 DIAGNOSTIC COMPLET:');
+    console.log('- eventData type:', typeof eventData);
+    console.log('- eventData keys:', Object.keys(eventData || {}));
+    console.log('- currentUserId:', currentUserId);
+    console.log('- currentUserId type:', typeof currentUserId);
+    console.log('📦 Safe contact payload (without utm_data):', tempContactData);
 
     const { data: tempContact, error: contactError } = await supabase
       .from('contacts')
@@ -322,7 +324,7 @@ serve(async (req) => {
     console.error("❌ Event creation flow failed:", {
       error: error.message,
       stack: error.stack,
-      eventData: eventData?.name || 'Unknown event'
+      timestamp: new Date().toISOString()
     });
     
     return new Response(
