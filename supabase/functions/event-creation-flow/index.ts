@@ -67,14 +67,24 @@ serve(async (req) => {
     const eventData: EventCreationRequest = await req.json();
     console.log('Starting event creation flow for:', eventData);
 
-    // Validation
-    if (!eventData.name || !eventData.duration || !eventData.host_ids?.length) {
-      throw new Error('Missing required fields: name, duration, or host_ids');
+    // Enhanced validation with proper error messages
+    console.log('🔍 Starting validation for event data:', {
+      name: eventData.name,
+      duration: eventData.duration,
+      host_ids: eventData.host_ids,
+      location: eventData.location,
+      type: eventData.type
+    });
+
+    if (!eventData.name || !eventData.duration || !eventData.host_ids?.length || !eventData.type) {
+      throw new Error('Missing required fields: name, duration, type, or host_ids');
     }
 
     // Step 1: Create form if needed (Step 3 data)
     let formId = null;
     if (eventData.form_data?.custom_questions?.length > 0) {
+      console.log('📝 Creating form with questions:', eventData.form_data.custom_questions);
+      
       const { data: form, error: formError } = await supabase
         .from('forms')
         .insert({
@@ -100,15 +110,11 @@ serve(async (req) => {
         .insert(questions);
 
       if (questionsError) throw questionsError;
+      console.log('✅ Form and questions created successfully');
     }
 
-    // Step 2: Create the main event (Step 1 data)
-    // Pour un template d'événement, on utilise une date temporaire par défaut
-    const defaultDateTime = new Date().toISOString();
-    
-    // Validation et normalisation des valeurs
-    // Normaliser la location pour correspondre à l'enum event_location
-    let normalizedLocation: string = 'online'; // valeur par défaut
+    // Step 2: Normalize and validate location enum
+    let normalizedLocation: string = 'online'; // default safe value
     if (eventData.location) {
       const locationMap: { [key: string]: string } = {
         'online': 'online',
@@ -116,24 +122,36 @@ serve(async (req) => {
         'custom': 'custom',
         'google_meet': 'online',
         'zoom': 'online',
-        'teams': 'online'
+        'teams': 'online',
+        'microsoft_teams': 'online',
+        'phone': 'custom'
       };
       normalizedLocation = locationMap[eventData.location.toLowerCase()] || 'online';
     }
-    
-    // Pour créer un template d'événement sans guest spécifique,
-    // on doit d'abord créer un contact temporaire pour satisfaire la contrainte FK
+    console.log('🗺️ Location normalized:', eventData.location, '->', normalizedLocation);
+
+    // Step 3: Generate proper date_time
+    let eventDateTime: string;
+    if (eventData.date_time) {
+      // Use provided date_time if valid
+      eventDateTime = new Date(eventData.date_time).toISOString();
+    } else {
+      // Use default template date (required for database)
+      eventDateTime = new Date().toISOString();
+    }
+    console.log('📅 Event date_time set to:', eventDateTime);
+
+    // Step 4: Create temporary contact for guest_id requirement
     const tempContactData = {
       first_name: 'Template',
       last_name: 'Guest',
       email: `template-${Date.now()}@example.com`,
       created_by: currentUserId,
       status: 'opportunity' as const,
-      timezone: 'UTC',
-      // utm_data peut être null (nullable), donc on ne l'inclut pas
+      timezone: eventData.timezone || 'UTC'
     };
     
-    console.log('🔄 Creating temporary contact with data:', tempContactData);
+    console.log('🔄 Creating temporary contact:', tempContactData);
     
     const { data: tempContact, error: contactError } = await supabase
       .from('contacts')
@@ -142,31 +160,34 @@ serve(async (req) => {
       .single();
 
     if (contactError) {
-      console.error('Error creating temporary contact:', contactError);
-      throw new Error('Failed to create temporary contact for event template');
+      console.error('❌ Error creating temporary contact:', contactError);
+      throw new Error(`Failed to create temporary contact: ${contactError.message}`);
     }
     
-    // Préparer le payload pour l'événement avec toutes les validations
+    console.log('✅ Temporary contact created:', tempContact.id);
+
+    // Step 5: Build clean event payload
     const eventPayload = {
       name: eventData.name,
-      type: eventData.type || '1v1',
+      type: eventData.type,
       duration: eventData.duration,
       host_ids: eventData.host_ids,
-      location: normalizedLocation, // Utiliser la location normalisée
-      date_time: defaultDateTime, // Champ obligatoire : date temporaire pour template
-      guest_id: tempContact.id, // Champ obligatoire : contact temporaire pour template
+      location: normalizedLocation,
+      date_time: eventDateTime,
+      guest_id: tempContact.id,
       form_id: formId,
       timezone: eventData.timezone || 'UTC',
       status: 'confirmed',
       created_by: currentUserId,
       color: eventData.color || '#1a6be3',
-      slug: eventData.slug,
-      description: eventData.description || null, // Explicitement null si vide
+      slug: eventData.slug || null,
+      description: eventData.description || null,
       mode: eventData.mode || 'private',
-      guest_limit: eventData.guest_limit || null, // Explicitement null si vide
+      guest_limit: eventData.guest_limit || null,
       show_remaining_spots: eventData.show_remaining_spots || false,
-      confirmation_settings: eventData.confirmation_settings ? 
-        (typeof eventData.confirmation_settings === 'object' ? eventData.confirmation_settings : null) : null
+      confirmation_settings: eventData.confirmation_settings && 
+        typeof eventData.confirmation_settings === 'object' ? 
+        eventData.confirmation_settings : null
     };
     
     console.log('📦 Final event payload being sent to Supabase:', eventPayload);

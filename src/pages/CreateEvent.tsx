@@ -79,6 +79,8 @@ interface EventDraft {
   internal_note?: string;
   duration?: number;
   type?: '1v1' | 'group' | 'round_robin';
+  timezone?: string;
+  date_time?: string;
   // Step 2 fields
   booking_window_type?: 'custom' | 'unlimited';
   booking_window_start?: string;
@@ -94,6 +96,8 @@ interface EventDraft {
   reschedule_allowed_team?: boolean;
   language?: 'fr' | 'en';
   hide_cookie_banner?: boolean;
+  availability_rules?: any[];
+  confirmation_settings?: any;
   // Step 3 fields
   guest_form?: {
     include_last_name: boolean;
@@ -370,58 +374,21 @@ const CreateEvent = () => {
   const handleCreateEvent = async () => {
     setIsCreatingEvent(true);
     try {
-      // Créer un objet propre sans références circulaires
-      const cleanEventDraft = {
-        name: eventDraft.name?.trim(),
-        duration: eventDraft.duration,
-        mode: eventDraft.mode,
-        type: eventDraft.type,
-        slug: eventDraft.slug?.trim(),
-        host_ids: Array.isArray(eventDraft.host_ids) ? eventDraft.host_ids : [],
-        location: eventDraft.location,
-        color: eventDraft.color,
-        description: eventDraft.description,
-        guest_form: eventDraft.guest_form,
-        disqualifications: eventDraft.disqualifications
-      };
-
-      // Debug complet de l'objet eventDraft avant validation
-      console.log('🚀 DEBUG - eventDraft original:', eventDraft);
-      console.log('🚀 DEBUG - eventDraft nettoyé:', cleanEventDraft);
-      console.log('🚀 DEBUG - Champs individuels:', {
-        name: cleanEventDraft.name,
-        nameLength: cleanEventDraft.name?.length,
-        duration: cleanEventDraft.duration,
-        mode: cleanEventDraft.mode,
-        type: cleanEventDraft.type,
-        slug: cleanEventDraft.slug,
-        slugLength: cleanEventDraft.slug?.length,
-        host_ids: cleanEventDraft.host_ids,
-        hostIdsLength: cleanEventDraft.host_ids?.length,
-        location: cleanEventDraft.location
-      });
-      
-      // Validation des champs requis selon vos spécifications
+      // Enhanced validation with detailed field checking
       const missingFields = [];
-      if (!cleanEventDraft.name || cleanEventDraft.name.length === 0) missingFields.push('nom');
-      if (!cleanEventDraft.duration || cleanEventDraft.duration <= 0) missingFields.push('durée');
-      if (!cleanEventDraft.slug || cleanEventDraft.slug.length === 0) missingFields.push('slug');
-      if (!cleanEventDraft.host_ids || cleanEventDraft.host_ids.length === 0) missingFields.push('organisateurs');
-      if (!cleanEventDraft.location) missingFields.push('lieu');
-      if (!cleanEventDraft.type) missingFields.push('type');
-      
-      const isFormValid = missingFields.length === 0;
-      
-      console.log('🔍 Validation finale:', {
-        isFormValid,
-        missingFields,
-        cleanEventDraft
-      });
-      
-      if (!isFormValid) {
+      if (!eventDraft.name?.trim()) missingFields.push('nom');
+      if (!eventDraft.duration || eventDraft.duration <= 0) missingFields.push('durée');
+      if (!eventDraft.type?.trim()) missingFields.push('type');
+      if (!eventDraft.slug?.trim()) missingFields.push('slug');
+      if (!eventDraft.host_ids?.length) missingFields.push('organisateurs');
+      if (!eventDraft.location?.trim()) missingFields.push('lieu');
+
+      if (missingFields.length > 0) {
+        const errorMessage = `Merci de compléter : ${missingFields.join(', ')}`;
+        console.error('❌ Validation failed:', errorMessage, eventDraft);
         toast({
           title: "Données manquantes",
-          description: `Merci de compléter : ${missingFields.join(', ')}`,
+          description: errorMessage,
           variant: "destructive",
         });
         setIsCreatingEvent(false);
@@ -436,6 +403,7 @@ const CreateEvent = () => {
           description: "Veuillez vous connecter pour créer un événement",
           variant: "destructive",
         });
+        setIsCreatingEvent(false);
         return;
       }
 
@@ -446,83 +414,54 @@ const CreateEvent = () => {
         .eq('user_id', user.user.id)
         .single();
 
-      // Normaliser la location pour correspondre aux valeurs acceptées par Supabase
-      const normalizeLocation = (location: string): string => {
-        const locationMap: { [key: string]: string } = {
-          'online': 'online',
-          'physical': 'physical', 
-          'custom': 'custom',
-          'google_meet': 'online',
-          'zoom': 'online',
-          'teams': 'online',
-          'call': 'online',
-          'meeting': 'online',
-          'sur place': 'physical',
-          'en ligne': 'online',
-          'bureau': 'physical',
-          'personnalisé': 'custom'
-        };
-        return locationMap[location?.toLowerCase()] || 'online';
-      };
-
-      // Construction du payload optimisé avec toutes les validations
-      const payload = {
-        name: cleanEventDraft.name,
-        duration: cleanEventDraft.duration,
-        type: cleanEventDraft.type || '1v1', // Enum Supabase: '1v1' | 'group' | 'round_robin'
-        location: normalizeLocation(cleanEventDraft.location), // Enum Supabase normalisé
-        host_ids: cleanEventDraft.host_ids || [],
-        color: cleanEventDraft.color || '#1a6be3',
-        slug: cleanEventDraft.slug,
-        description: cleanEventDraft.description || null, // Explicitement null si vide
-        mode: cleanEventDraft.mode || 'private',
-        guest_limit: eventDraft.guest_limit || null, // Explicitement null si vide  
+      // Clean and normalize the payload
+      const cleanedPayload = {
+        name: eventDraft.name.trim(),
+        type: eventDraft.type,
+        duration: eventDraft.duration,
+        host_ids: eventDraft.host_ids,
+        location: eventDraft.location, // Will be normalized in edge function
+        color: eventDraft.color || '#1a6be3',
+        slug: eventDraft.slug.trim(),
+        description: eventDraft.description?.trim() || null,
+        mode: eventDraft.mode || 'private',
+        guest_limit: eventDraft.guest_limit || null,
         show_remaining_spots: eventDraft.show_remaining_spots || false,
+        timezone: eventDraft.timezone || 'UTC',
+        date_time: eventDraft.date_time || new Date().toISOString(),
         
-        // Données du formulaire invité - vérifier qu'il n'est pas vide
-        form_data: eventDraft.guest_form && Object.keys(eventDraft.guest_form).length > 0 ? eventDraft.guest_form : {
-          include_last_name: false,
-          include_email: false,
-          custom_questions: []
-        },
+        // Form data
+        form_data: eventDraft.guest_form?.custom_questions?.length ? {
+          custom_questions: eventDraft.guest_form.custom_questions
+        } : null,
         
-        // Règles de disqualification - structure complète et valide
-        disqualifications: eventDraft.disqualifications?.rules?.length > 0 ? {
-          rules: eventDraft.disqualifications.rules,
-          logic_type: eventDraft.disqualifications?.logic_type || 'OR',
-          message: eventDraft.disqualifications?.message || 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
-          redirect_enabled: eventDraft.disqualifications?.redirect_enabled || false,
-          redirect_url: eventDraft.disqualifications?.redirect_enabled ? eventDraft.disqualifications?.redirect_url : null,
-          redirect_with_params: eventDraft.disqualifications?.redirect_with_params || false
-        } : { rules: [] },
+        // Availability rules
+        availability_rules: eventDraft.availability_rules || [],
         
-        // Notifications - array vide si pas de notifications
+        // Notifications
         notifications: Array.isArray(notifications) ? notifications : [],
         
-        // Règles de disponibilité (pour future implémentation)
-        availability_rules: [],
+        // Disqualifications - clean structure
+        disqualifications: eventDraft.disqualifications?.rules?.length ? {
+          rules: eventDraft.disqualifications.rules,
+          logic_type: eventDraft.disqualifications.logic_type || 'OR',
+          message: eventDraft.disqualifications.message || 'Désolé, vous ne pouvez pas réserver cet évènement pour le moment.',
+          redirect_enabled: eventDraft.disqualifications.redirect_enabled || false,
+          redirect_url: eventDraft.disqualifications.redirect_url || null,
+          redirect_with_params: eventDraft.disqualifications.redirect_with_params || false
+        } : null,
         
-        // Paramètres de confirmation - objet complet et valide
-        confirmation_settings: {
-          booking_window_type: eventDraft.booking_window_type || 'unlimited',
-          slot_interval: eventDraft.slot_interval || 30,
-          timezone_behavior: eventDraft.timezone_behavior || 'auto',
-          time_format: eventDraft.time_format || '24h',
-          buffers_enabled: eventDraft.buffers_enabled || false,
-          buffer_before: eventDraft.buffer_before || 0,
-          buffer_after: eventDraft.buffer_after || 0,
-          reschedule_allowed_guest: eventDraft.reschedule_allowed_guest || false,
-          reschedule_allowed_team: eventDraft.reschedule_allowed_team || false,
-          language: eventDraft.language || 'fr',
-          hide_cookie_banner: eventDraft.hide_cookie_banner || false
-        }
+        // Confirmation settings - clean JSON
+        confirmation_settings: eventDraft.confirmation_settings && 
+          typeof eventDraft.confirmation_settings === 'object' ? 
+          eventDraft.confirmation_settings : null
       };
 
-      console.log("📦 Payload final envoyé à Supabase :", payload);
+      console.log('📦 Payload final envoyé :', cleanedPayload);
 
       // Appel de la fonction edge avec payload optimisé
       const { data, error } = await supabase.functions.invoke('event-creation-flow', {
-        body: payload
+        body: cleanedPayload
       });
 
       if (error) {
