@@ -175,25 +175,23 @@ serve(async (req) => {
     }
     console.log('📅 Event date_time set to:', eventDateTime);
 
-    // Step 4: Create temporary contact for guest_id requirement - VERSION ULTRA SAFE
+    // Step 4: Create temporary contact - VERSION ULTRA MINIMALE POUR DEBUG
+    console.log('🔍 BEFORE CONTACT CREATION - Debugging all variables:');
+    console.log('- currentUserId:', currentUserId, 'type:', typeof currentUserId);
+    console.log('- eventData.timezone:', eventData.timezone, 'type:', typeof eventData.timezone);
+    
+    // Contact le plus basique possible - AUCUN champ nullable ou complexe
     const tempContactData = {
       first_name: 'Template',
-      last_name: 'Guest',
+      last_name: 'Guest', 
       email: `template-${Date.now()}@example.com`,
       created_by: currentUserId,
-      status: 'opportunity' as const,
-      timezone: eventData.timezone || 'UTC',
-      phone: null,
-      assigned_to: null
-      // utm_data: COMPLÈTEMENT SUPPRIMÉ pour isoler le problème
+      status: 'opportunity',
+      timezone: 'UTC'
     };
 
-    console.log('🔍 DIAGNOSTIC COMPLET:');
-    console.log('- eventData type:', typeof eventData);
-    console.log('- eventData keys:', Object.keys(eventData || {}));
-    console.log('- currentUserId:', currentUserId);
-    console.log('- currentUserId type:', typeof currentUserId);
-    console.log('📦 Safe contact payload (without utm_data):', tempContactData);
+    console.log('📦 ULTRA MINIMAL Contact payload:', JSON.stringify(tempContactData, null, 2));
+    console.log('🔍 About to insert contact with these exact values...');
 
     const { data: tempContact, error: contactError } = await supabase
       .from('contacts')
@@ -202,7 +200,13 @@ serve(async (req) => {
       .single();
 
     if (contactError) {
-      console.error('❌ Contact creation failed:', contactError);
+      console.error('❌ DETAILED Contact creation error:', {
+        message: contactError.message,
+        details: contactError.details,
+        hint: contactError.hint,
+        code: contactError.code,
+        payload: tempContactData
+      });
       throw new Error(`Contact creation failed: ${contactError.message}`);
     }
 
