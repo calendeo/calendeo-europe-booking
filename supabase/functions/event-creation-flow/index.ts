@@ -151,10 +151,10 @@ serve(async (req) => {
       timezone: eventData.timezone || 'UTC',
       phone: null,
       assigned_to: null,
-      utm_data: null
+      utm_data: {} // Properly formatted JSON object instead of null
     };
     
-    console.log('🧾 Contact envoyé à Supabase :', tempContactData);
+    console.log('📦 Payload final envoyé à Supabase (contact):', tempContactData);
     
     console.log('🔄 Creating temporary contact:', tempContactData);
     
