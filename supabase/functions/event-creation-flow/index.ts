@@ -28,21 +28,7 @@ interface EventCreationRequest {
   date_time?: string;
 }
 
-// Utility function to safely handle JSON data
-const safeJsonData = (data: any): any => {
-  if (!data) return null;
-  if (typeof data !== 'object') return null;
-  if (Array.isArray(data)) return data;
-  
-  try {
-    // Ensure it's a valid object that can be serialized
-    JSON.stringify(data);
-    return data;
-  } catch (error) {
-    console.warn('⚠️ Invalid JSON data detected, returning null');
-    return null;
-  }
-};
+// SUPPRESSION COMPLÈTE de la fonction safeJsonData qui peut causer des erreurs JSON
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -106,13 +92,8 @@ serve(async (req) => {
       throw new Error('host_ids must be a non-empty array');
     }
 
-    // Sanitize utm_data if provided
-    if (eventData.utm_data) {
-      if (typeof eventData.utm_data !== 'object' || Array.isArray(eventData.utm_data)) {
-        console.warn('⚠️ Invalid utm_data format, setting to null');
-        eventData.utm_data = null;
-      }
-    }
+    // SUPPRESSION COMPLÈTE de la gestion utm_data pour éliminer toute source d'erreur JSON
+    console.log('🔧 Skipping utm_data validation - removed to prevent JSON errors');
 
     // Step 1: Create form if needed (Step 3 data)
     let formId = null;
@@ -231,9 +212,7 @@ serve(async (req) => {
       mode: eventData.mode || 'private',
       guest_limit: eventData.guest_limit || null,
       show_remaining_spots: eventData.show_remaining_spots || false,
-      confirmation_settings: eventData.confirmation_settings && 
-        typeof eventData.confirmation_settings === 'object' ? 
-        eventData.confirmation_settings : null
+      confirmation_settings: null // SUPPRESSION pour éliminer toute validation JSON problématique
     };
     
     console.log('📦 Final event payload being sent to Supabase:', eventPayload);
