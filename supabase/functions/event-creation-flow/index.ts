@@ -142,12 +142,8 @@ serve(async (req) => {
     console.log('📅 Event date_time set to:', eventDateTime);
 
     // Step 4: Create temporary contact for guest_id requirement
-    let utm_data = {};
-    
-    // Defensive validation for utm_data JSON field
-    if (typeof utm_data !== 'object' || utm_data === null || Array.isArray(utm_data)) {
-      utm_data = {};
-    }
+    // Force clean JSON object transformation to avoid interpolation issues
+    const safeUtmData = JSON.parse(JSON.stringify(eventData.utm_data || {}));
     
     const tempContactData = {
       first_name: 'Template',
@@ -158,7 +154,7 @@ serve(async (req) => {
       timezone: eventData.timezone || 'UTC',
       phone: null,
       assigned_to: null,
-      utm_data: utm_data
+      utm_data: safeUtmData
     };
     
     console.log('📦 Payload final envoyé à Supabase (contact):', tempContactData);
