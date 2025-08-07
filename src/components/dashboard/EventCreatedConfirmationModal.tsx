@@ -32,46 +32,74 @@ export const EventCreatedConfirmationModal: React.FC<EventCreatedConfirmationMod
   const bookingUrl = `${window.location.origin}/book/${event.slug || event.id}`;
 
   const handleCopyLink = async () => {
-    console.log("🔗 Copie du lien:", bookingUrl);
+    console.log("🔗 Tentative de copie du lien:", bookingUrl);
     try {
       await navigator.clipboard.writeText(bookingUrl);
+      console.log("✅ Lien copié avec succès");
       toast({
         title: 'Lien copié',
         description: 'Le lien de réservation a été copié dans le presse-papiers.',
       });
     } catch (error) {
-      console.error('Error copying to clipboard:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de copier le lien.',
-        variant: 'destructive',
-      });
+      console.error('❌ Erreur lors de la copie:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = bookingUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast({
+          title: 'Lien copié',
+          description: 'Le lien de réservation a été copié dans le presse-papiers.',
+        });
+      } catch (fallbackError) {
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de copier le lien automatiquement.',
+          variant: 'destructive',
+        });
+      }
+      document.body.removeChild(textArea);
     }
   };
 
   const handleViewEvent = () => {
     console.log("👁️ Ouverture de la page:", bookingUrl);
-    window.open(bookingUrl, '_blank');
+    try {
+      window.open(bookingUrl, '_blank', 'noopener,noreferrer');
+      console.log("✅ Page ouverte avec succès");
+    } catch (error) {
+      console.error("❌ Erreur lors de l'ouverture:", error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'ouvrir la page de réservation.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleShare = async () => {
-    console.log("📤 Partage de l'événement:", event.name);
-    if (navigator.share) {
-      try {
+    console.log("📤 Tentative de partage de l'événement:", event.name);
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: event.name,
           text: `Réservez un créneau pour : ${event.name}`,
           url: bookingUrl,
         });
-      } catch (error) {
-        if (error instanceof Error && error.name !== 'AbortError') {
-          console.log("📤 Partage annulé, copie du lien en fallback");
-          handleCopyLink();
-        }
+        console.log("✅ Partage réussi");
+      } else {
+        console.log("📤 Web Share API non supportée, utilisation de la copie");
+        await handleCopyLink();
       }
-    } else {
-      console.log("📤 Web Share API non supportée, copie du lien");
-      handleCopyLink();
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.log("📤 Partage annulé ou erreur, fallback vers copie");
+        await handleCopyLink();
+      } else {
+        console.log("📤 Partage annulé par l'utilisateur");
+      }
     }
   };
 

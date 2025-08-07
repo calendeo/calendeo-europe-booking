@@ -32,14 +32,31 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setLoading(true);
 
     try {
-      // Call the event-creation-flow edge function
+      // Get current user's internal ID first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Utilisateur non connecté');
+
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (userError) {
+        console.error("❌ Erreur récupération utilisateur:", userError);
+        throw userError;
+      }
+
+      console.log("👤 User ID interne pour création:", userData.id);
+
+      // Call the event-creation-flow edge function with real user ID
       const { data, error } = await supabase.functions.invoke('event-creation-flow', {
         body: {
           name: formData.name,
           duration: parseInt(formData.duration),
           type: formData.type,
           location: formData.location,
-          host_ids: ['00000000-0000-0000-0000-000000000000'], // Mock host ID for demo
+          host_ids: [userData.id], // Use real user ID
         }
       });
 
@@ -49,6 +66,11 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       onEventCreated(data); // 👉 déclenche le refetch dans Dashboard
       onOpenChange(false); // ferme la modale
       setFormData({ name: '', duration: '30', type: 'consultation', location: 'online' });
+      
+      toast({
+        title: 'Succès',
+        description: 'Événement créé avec succès !',
+      });
     } catch (error) {
       console.error('Error creating event:', error);
       toast({
