@@ -74,7 +74,7 @@ const Home = () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('created_by', userData.id)
+        .or(`created_by.eq.${userData.id},host_ids.cs.{${userData.id}}`)
         .order('created_at', { ascending: false });
 
       if (error) {

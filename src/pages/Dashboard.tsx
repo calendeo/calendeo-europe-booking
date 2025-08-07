@@ -22,6 +22,7 @@ interface Event {
   status: string;
   created_at: string;
   host_ids: string[];
+  slug?: string;
 }
 
 const Dashboard = () => {

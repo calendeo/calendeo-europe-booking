@@ -21,6 +21,7 @@ import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import BookEvent from "./pages/BookEvent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -100,6 +101,7 @@ const App = () => (
                 <Dashboard />
               </ProtectedRoute>
             } />
+            <Route path="/book/:eventSlug" element={<BookEvent />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
