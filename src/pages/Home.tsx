@@ -55,7 +55,7 @@ const Home = () => {
 
   const fetchEvents = async () => {
     try {
-      console.log("🔄 Début de fetchEvents, utilisateur:", user?.id);
+      console.log("🔄 Récupération des événements pour l'utilisateur:", user?.id);
       
       // Get current user ID first
       const { data: userData, error: userError } = await supabase
@@ -69,7 +69,7 @@ const Home = () => {
         throw userError;
       }
 
-      console.log("👤 ID utilisateur interne trouvé:", userData.id);
+      console.log("👤 ID utilisateur interne:", userData.id);
 
       const { data, error } = await supabase
         .from('events')
@@ -82,8 +82,7 @@ const Home = () => {
         throw error;
       }
       
-      console.log("📥 Nombre d'événements récupérés:", data?.length || 0);
-      console.log("📊 Détail des événements:", data);
+      console.log("📥 Événements récupérés:", data);
       setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -107,16 +106,10 @@ const Home = () => {
   };
 
   const handleEventCreated = (event: any) => {
-    console.log("🎯 Event créé dans Home, données reçues:", event);
-    console.log("🔍 Type de données:", typeof event, "Contenu:", JSON.stringify(event, null, 2));
+    console.log("🎯 Event créé dans Home:", event);
     setCreatedEvent(event);
     setShowConfirmationModal(true);
-    console.log("✅ Modale de confirmation activée, état:", {
-      showConfirmationModal: true,
-      createdEvent: event
-    });
     // Rafraîchir immédiatement la liste des événements
-    console.log("🔄 Début du refetch des événements...");
     fetchEvents();
   };
 

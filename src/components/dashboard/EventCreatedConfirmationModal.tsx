@@ -27,19 +27,9 @@ export const EventCreatedConfirmationModal: React.FC<EventCreatedConfirmationMod
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  console.log("🎭 EventCreatedConfirmationModal rendu avec:", {
-    open,
-    event,
-    eventExists: !!event
-  });
-
-  if (!event) {
-    console.log("❌ Pas d'événement fourni à la modale");
-    return null;
-  }
+  if (!event) return null;
 
   const bookingUrl = `${window.location.origin}/book/${event.slug || event.id}`;
-  console.log("🔗 URL de réservation générée:", bookingUrl);
 
   const handleCopyLink = async () => {
     console.log("🔗 Tentative de copie du lien:", bookingUrl);
@@ -134,66 +124,39 @@ export const EventCreatedConfirmationModal: React.FC<EventCreatedConfirmationMod
             <p className="text-sm text-muted-foreground mt-1">
               Votre événement est maintenant disponible pour les réservations
             </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              🔗 {bookingUrl}
-            </p>
           </div>
 
           <div className="space-y-3">
             <Button
-              onClick={(e) => {
-                console.log("🔘 Clic sur bouton Copier");
-                e.preventDefault();
-                e.stopPropagation();
-                handleCopyLink();
-              }}
+              onClick={handleCopyLink}
               variant="outline"
               className="w-full gap-2"
-              type="button"
             >
               <Copy className="h-4 w-4" />
               Copier le lien de réservation
             </Button>
 
             <Button
-              onClick={(e) => {
-                console.log("🔘 Clic sur bouton Voir");
-                e.preventDefault();
-                e.stopPropagation();
-                handleViewEvent();
-              }}
+              onClick={handleViewEvent}
               variant="outline"
               className="w-full gap-2"
-              type="button"
             >
               <ExternalLink className="h-4 w-4" />
               Voir la page de réservation
             </Button>
 
             <Button
-              onClick={(e) => {
-                console.log("🔘 Clic sur bouton Partager");
-                e.preventDefault();
-                e.stopPropagation();
-                handleShare();
-              }}
+              onClick={handleShare}
               variant="outline"
               className="w-full gap-2"
-              type="button"
             >
               <Share2 className="h-4 w-4" />
               Partager
             </Button>
 
             <Button
-              onClick={(e) => {
-                console.log("🔘 Clic sur bouton Retour");
-                e.preventDefault();
-                e.stopPropagation();
-                handleReturnToDashboard();
-              }}
+              onClick={handleReturnToDashboard}
               className="w-full gap-2 mt-4"
-              type="button"
             >
               <ArrowLeft className="h-4 w-4" />
               Retour au dashboard
