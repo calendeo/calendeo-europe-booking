@@ -75,9 +75,6 @@ export const EventCreatedConfirmationModal: React.FC<EventCreatedConfirmationMod
   const handleReturnToDashboard = () => {
     onOpenChange(false);
     onReturnToDashboard();
-    navigate('/', { replace: true });
-    // Force refresh to show the new event
-    window.location.reload();
   };
 
   return (

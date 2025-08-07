@@ -94,14 +94,15 @@ const Home = () => {
   };
 
   const handleEventCreated = (event: any) => {
-    setShowCreateModal(false);
+    console.log("🎯 Event créé dans Home:", event);
     setCreatedEvent(event);
     setShowConfirmationModal(true);
   };
 
   const handleReturnToDashboard = () => {
     setShowConfirmationModal(false);
-    fetchEvents();
+    setCreatedEvent(null);
+    fetchEvents(); // Recharger la liste des événements
   };
 
   if (loading) {
