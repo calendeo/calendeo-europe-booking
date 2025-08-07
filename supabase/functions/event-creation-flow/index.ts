@@ -139,7 +139,7 @@ serve(async (req) => {
 
     console.log('✅ Temporary contact created successfully:', tempContact.id);
 
-    // Build clean event payload - VERSION ULTRA SIMPLIFIÉE
+    // Build event payload - SUPPRESSION COMPLÈTE de tous les champs pouvant causer des erreurs JSON
     const eventPayload = {
       name: eventData.name,
       type: eventData.type,
@@ -151,12 +151,8 @@ serve(async (req) => {
       timezone: eventData.timezone || 'UTC',
       status: 'confirmed',
       created_by: currentUserId,
-      color: eventData.color || '#1a6be3',
-      slug: eventData.slug || null,
-      description: eventData.description || null,
-      mode: eventData.mode || 'private',
-      guest_limit: eventData.guest_limit || null,
-      show_remaining_spots: eventData.show_remaining_spots || false
+      color: eventData.color || '#1a6be3'
+      // SUPPRESSION TOTALE de tous les autres champs pour éliminer les erreurs JSON
     };
     
     console.log('📦 SIMPLIFIED event payload:', eventPayload);
