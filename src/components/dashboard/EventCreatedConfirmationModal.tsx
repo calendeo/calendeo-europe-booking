@@ -32,6 +32,7 @@ export const EventCreatedConfirmationModal: React.FC<EventCreatedConfirmationMod
   const bookingUrl = `${window.location.origin}/book/${event.slug || event.id}`;
 
   const handleCopyLink = async () => {
+    console.log("🔗 Copie du lien:", bookingUrl);
     try {
       await navigator.clipboard.writeText(bookingUrl);
       toast({
@@ -49,10 +50,12 @@ export const EventCreatedConfirmationModal: React.FC<EventCreatedConfirmationMod
   };
 
   const handleViewEvent = () => {
+    console.log("👁️ Ouverture de la page:", bookingUrl);
     window.open(bookingUrl, '_blank');
   };
 
   const handleShare = async () => {
+    console.log("📤 Partage de l'événement:", event.name);
     if (navigator.share) {
       try {
         await navigator.share({
@@ -62,17 +65,18 @@ export const EventCreatedConfirmationModal: React.FC<EventCreatedConfirmationMod
         });
       } catch (error) {
         if (error instanceof Error && error.name !== 'AbortError') {
-          // Fallback to copy if share was canceled or failed
+          console.log("📤 Partage annulé, copie du lien en fallback");
           handleCopyLink();
         }
       }
     } else {
-      // Fallback for browsers that don't support Web Share API
+      console.log("📤 Web Share API non supportée, copie du lien");
       handleCopyLink();
     }
   };
 
   const handleReturnToDashboard = () => {
+    console.log("🏠 Retour au dashboard");
     onOpenChange(false);
     onReturnToDashboard();
   };

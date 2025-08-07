@@ -54,6 +54,8 @@ const Home = () => {
 
   const fetchEvents = async () => {
     try {
+      console.log("🔄 Récupération des événements pour l'utilisateur:", user?.id);
+      
       // Get current user ID first
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -61,7 +63,12 @@ const Home = () => {
         .eq('user_id', user?.id)
         .single();
 
-      if (userError) throw userError;
+      if (userError) {
+        console.error("❌ Erreur récupération utilisateur:", userError);
+        throw userError;
+      }
+
+      console.log("👤 ID utilisateur interne:", userData.id);
 
       const { data, error } = await supabase
         .from('events')
@@ -69,8 +76,12 @@ const Home = () => {
         .eq('created_by', userData.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      console.log("📥 Événements récupérés :", data);
+      if (error) {
+        console.error("❌ Erreur récupération événements:", error);
+        throw error;
+      }
+      
+      console.log("📥 Événements récupérés:", data);
       setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
