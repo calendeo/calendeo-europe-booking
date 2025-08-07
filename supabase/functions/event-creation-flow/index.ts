@@ -148,7 +148,20 @@ serve(async (req) => {
       email: `template-${Date.now()}@example.com`,
       created_by: currentUserId,
       status: 'opportunity' as const,
-      timezone: eventData.timezone || 'UTC'
+      timezone: eventData.timezone || 'UTC',
+      metadata: null, // Explicitly set to null instead of undefined
+      tags: null,
+      notes: null,
+      phone: null,
+      company: null,
+      position: null,
+      website: null,
+      address: null,
+      social_links: null,
+      lead_source: null,
+      lead_score: null,
+      last_interaction: null,
+      custom_fields: null
     };
     
     console.log('🔄 Creating temporary contact:', tempContactData);
