@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface CreateEventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEventCreated: () => void;
+  onEventCreated: (event: any) => void;
 }
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({
@@ -45,13 +45,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
       if (error) throw error;
 
-      onEventCreated();
+      console.log("🎯 Event créé :", data);
+      onEventCreated(data);
       setFormData({ name: '', duration: '30', type: 'consultation', location: 'online' });
-      
-      toast({
-        title: 'Succès',
-        description: 'Événement créé avec succès !',
-      });
     } catch (error) {
       console.error('Error creating event:', error);
       toast({

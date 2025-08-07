@@ -8,6 +8,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { EventsSection } from '@/components/dashboard/EventsSection';
 import { CreateEventModal } from '@/components/dashboard/CreateEventModal';
 import { ShareEventModal } from '@/components/dashboard/ShareEventModal';
+import { EventCreatedConfirmationModal } from '@/components/dashboard/EventCreatedConfirmationModal';
 import { useGoogleCalendar } from '@/hooks/use-google-calendar';
 import { GoogleCalendarConnectButton } from '@/components/GoogleCalendarConnectButton';
 import { GoogleCalendarBadge } from '@/components/GoogleCalendarBadge';
@@ -29,7 +30,9 @@ const Home = () => {
   const [eventsLoading, setEventsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [createdEvent, setCreatedEvent] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,12 +54,23 @@ const Home = () => {
 
   const fetchEvents = async () => {
     try {
+      // Get current user ID first
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (userError) throw userError;
+
       const { data, error } = await supabase
         .from('events')
         .select('*')
+        .eq('created_by', userData.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log("📥 Événements récupérés :", data);
       setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -79,13 +93,15 @@ const Home = () => {
     setShowShareModal(true);
   };
 
-  const handleEventCreated = () => {
+  const handleEventCreated = (event: any) => {
     setShowCreateModal(false);
+    setCreatedEvent(event);
+    setShowConfirmationModal(true);
+  };
+
+  const handleReturnToDashboard = () => {
+    setShowConfirmationModal(false);
     fetchEvents();
-    toast({
-      title: 'Succès',
-      description: 'Événement créé avec succès !',
-    });
   };
 
   if (loading) {
@@ -150,6 +166,13 @@ const Home = () => {
           open={showShareModal}
           onOpenChange={setShowShareModal}
           event={selectedEvent}
+        />
+
+        <EventCreatedConfirmationModal
+          open={showConfirmationModal}
+          onOpenChange={setShowConfirmationModal}
+          event={createdEvent}
+          onReturnToDashboard={handleReturnToDashboard}
         />
       </div>
     </AppLayout>
