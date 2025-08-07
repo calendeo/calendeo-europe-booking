@@ -60,9 +60,9 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-foreground">Mes événements</h2>
-        <Button onClick={() => navigate('/create-event')} className="gap-2">
+        <Button onClick={onCreateEvent} className="gap-2">
           <Plus className="h-4 w-4" />
-          Créer un événement
+          Créer un événement (Modale)
         </Button>
         </div>
 
@@ -81,9 +81,9 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
                 Configurez les détails de votre événement, ajoutez des hôtes et gérez vos paramètres de planification.
               </p>
             </div>
-            <Button onClick={() => navigate('/create-event')} size="lg" className="gap-2">
+            <Button onClick={onCreateEvent} size="lg" className="gap-2">
               <Plus className="h-4 w-4" />
-              Créer un événement
+              Créer un événement (Modale)
             </Button>
           </CardContent>
         </Card>
@@ -95,9 +95,9 @@ export const EventsSection: React.FC<EventsSectionProps> = ({
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-foreground">Mes événements</h2>
-        <Button onClick={() => navigate('/create-event')} className="gap-2">
+        <Button onClick={onCreateEvent} className="gap-2">
           <Plus className="h-4 w-4" />
-          Créer un événement
+          Créer un événement (Modale)
         </Button>
       </div>
 
