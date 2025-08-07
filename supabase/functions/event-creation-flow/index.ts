@@ -108,6 +108,19 @@ serve(async (req) => {
     }
     console.log('📅 Event date_time set to:', eventDateTime);
 
+    // Generate slug from event name
+    const generateSlug = (name: string): string => {
+      const randomId = Math.random().toString(36).substring(2, 8);
+      return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50) + '-' + randomId;
+    };
+    
+    const eventSlug = generateSlug(eventData.name);
+    console.log('🔗 Generated slug:', eventSlug);
+
     // Create temporary contact - VERSION ULTRA MINIMALE
     const tempContactData = {
       first_name: 'Template',
@@ -151,7 +164,8 @@ serve(async (req) => {
       timezone: eventData.timezone || 'UTC',
       status: 'confirmed',
       created_by: currentUserId,
-      color: eventData.color || '#1a6be3'
+      color: eventData.color || '#1a6be3',
+      slug: eventSlug
       // SUPPRESSION TOTALE de tous les autres champs pour éliminer les erreurs JSON
     };
     
